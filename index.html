@@ -1,4 +1,558 @@
 ---
-layout: home
-# Index page
+layout: null
+permalink: /
 ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xavier Frankline Odhiambo — Backend Engineer</title>
+<meta name="description" content="Backend engineer based in Nairobi, Kenya. Python, Django, PostgreSQL, AWS. Currently at Search Atlas.">
+<meta name="author" content="Xavier Frankline Odhiambo">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Xavier Frankline Odhiambo — Backend Engineer">
+<meta property="og:description" content="Backend engineer based in Nairobi. Python, Django, PostgreSQL, AWS.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://xavierodhiambo.com">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23000%22/><text x=%2250%22 y=%2272%22 font-size=%2280%22 font-family=%22monospace%22 font-weight=%22700%22 fill=%22%23fde047%22 text-anchor=%22middle%22>X</text></svg>">
+
+<style>
+  :root {
+    /* Dark mode is the default — black + yellow */
+    --bg: #0a0a0a;
+    --bg-alt: #141414;
+    --text: #f5f5f0;
+    --text-soft: #a3a3a0;
+    --text-faint: #6e6e6b;
+    --accent: #fde047;
+    --accent-soft: #fef3c7;
+    --rule: #232323;
+    --rule-strong: #2e2e2e;
+    --mono: 'JetBrains Mono', 'Berkeley Mono', 'SF Mono', Menlo, ui-monospace, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafaf7;
+      --bg-alt: #f0f0eb;
+      --text: #0a0a0a;
+      --text-soft: #404040;
+      --text-faint: #888885;
+      --accent: #ca8a04;
+      --accent-soft: #fef3c7;
+      --rule: #e5e5e0;
+      --rule-strong: #d4d4d0;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+    position: relative;
+  }
+
+  /* Top status bar */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 3.5rem;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(253, 224, 71, 0.15);
+  }
+
+  /* Header */
+  header { margin-bottom: 4rem; }
+
+  .name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--text);
+  }
+
+  .name-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: rgba(253, 224, 71, 0.08);
+    border: 1px solid rgba(253, 224, 71, 0.3);
+    padding: 0.2rem 0.55rem;
+    border-radius: 2px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  .tagline {
+    font-family: var(--sans);
+    color: var(--text-soft);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    max-width: 36rem;
+  }
+
+  .contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .contact a {
+    color: var(--text-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .contact a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .contact-prefix { color: var(--text-faint); }
+
+  /* Sections */
+  section { margin-bottom: 4rem; position: relative; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+
+  /* Intro */
+  .intro {
+    font-size: 1.02rem;
+    line-height: 1.65;
+    max-width: 38rem;
+  }
+
+  .intro p {
+    margin-bottom: 1.1rem;
+    color: var(--text);
+  }
+
+  .intro p:last-child { color: var(--text-soft); }
+
+  .intro a {
+    color: var(--text);
+    text-decoration: none;
+    background: linear-gradient(to top, var(--accent) 0%, var(--accent) 2px, transparent 2px, transparent 100%);
+    padding-bottom: 1px;
+    transition: background 0.15s ease, color 0.15s ease, padding 0.15s ease;
+  }
+
+  .intro a:hover {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0 4px;
+  }
+
+  /* Items (projects, OSS) */
+  .item {
+    padding: 1.4rem 0;
+    border-bottom: 1px solid var(--rule);
+    transition: padding-left 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .item:hover {
+    padding-left: 0.75rem;
+    box-shadow: inset 2px 0 0 0 var(--accent);
+  }
+
+  .item:last-child { border-bottom: none; }
+
+  .item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+  }
+
+  .item-title {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .item-title a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .item-title a:hover { color: var(--accent); }
+
+  .item-link {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: color 0.15s ease;
+  }
+
+  .item-link::before {
+    content: "→ ";
+    color: var(--accent);
+  }
+
+  .item-link:hover { color: var(--accent); }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.2rem 0 0.6rem;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text-faint);
+    background: var(--bg-alt);
+    border: 1px solid var(--rule-strong);
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.02em;
+  }
+
+  .item-desc {
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    max-width: 42rem;
+  }
+
+  /* Writing list */
+  .post {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+    transition: padding-left 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .post:hover {
+    padding-left: 0.75rem;
+    box-shadow: inset 2px 0 0 0 var(--accent);
+  }
+
+  .post:last-child { border-bottom: none; }
+
+  .post a {
+    color: var(--text);
+    text-decoration: none;
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.15s ease;
+  }
+
+  .post a:hover { color: var(--accent); }
+
+  .post-date {
+    font-family: var(--mono);
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    flex-shrink: 0;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  footer a {
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  footer a:hover { color: var(--accent); }
+
+  .build { color: var(--text-faint); }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    body { font-size: 14.5px; }
+    .container { padding: 2rem 1.1rem 4rem; }
+    h1 { font-size: 1.5rem; }
+    .name-row { gap: 0.6rem; }
+    .topbar { font-size: 0.65rem; }
+    .topbar-right { display: none; }
+    .section-header { gap: 0.7rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 0.85rem; }
+    .item:hover, .post:hover { padding-left: 0.5rem; }
+    .item-top { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+  }
+
+  /* Selection */
+  ::selection {
+    background: var(--accent);
+    color: var(--bg);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="topbar">
+    <span class="status">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Nairobi · UTC+3</span>
+    </span>
+    <span class="topbar-right">v.2026.05</span>
+  </div>
+
+  <header>
+    <div class="name-row">
+      <h1>Xavier Odhiambo</h1>
+      <span class="name-tag">Senior Backend Engineer</span>
+    </div>
+    <p class="tagline">I build backend systems for SaaS and civic-tech platforms across Africa — APIs, distributed pipelines, observability, the parts that have to keep working when nobody's watching.</p>
+    <div class="contact">
+      <span><span class="contact-prefix">email </span><a href="mailto:xavierfrank4@gmail.com">xavierfrank4@gmail.com</a></span>
+      <span><span class="contact-prefix">github </span><a href="https://github.com/thepsalmist" target="_blank" rel="noopener">@thepsalmist</a></span>
+      <span><span class="contact-prefix">linkedin </span><a href="https://www.linkedin.com/in/xavierodhiambo" target="_blank" rel="noopener">/in/xavierodhiambo</a></span>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">01 /</span>
+      <h2>About</h2>
+    </div>
+    <div class="intro">
+      <p>Currently a Senior Software Engineer at <a href="https://searchatlas.com" target="_blank" rel="noopener">Search Atlas</a>, an agentic SEO platform — working on backend services that integrate Google Search Console, Analytics, Ads, and Meta Ads. Before that, I spent three years at <a href="https://codeforafrica.org" target="_blank" rel="noopener">Code for Africa</a> building civic-tech platforms used by researchers and journalists across the continent.</p>
+      <p>I care about systems that hold up under real-world conditions — distributed services, observability-first design, careful database work, and software that works in low-bandwidth environments. AWS Solutions Architect certified. Open-source contributor to Django and CKAN.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">02 /</span>
+      <h2>Selected Work</h2>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title">Mediacloud Story-Indexer</span>
+        <a class="item-link" href="https://github.com/mediacloud/story-indexer" target="_blank" rel="noopener">github.com/mediacloud</a>
+      </div>
+      <div class="stack">
+        <span class="tag">Python</span>
+        <span class="tag">FastAPI</span>
+        <span class="tag">RabbitMQ</span>
+        <span class="tag">Elasticsearch</span>
+        <span class="tag">Docker</span>
+      </div>
+      <p class="item-desc">Contributed to a distributed news ingestion pipeline operated by Mediacloud, a nonprofit research collaboration. The system tracks thousands of news sources and indexes hundreds of millions of stories used by researchers studying media ecosystems globally.</p>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title">Sensors.Africa</span>
+        <a class="item-link" href="https://github.com/CodeForAfrica/sensors.AFRICA-api" target="_blank" rel="noopener">github.com/CodeForAfrica</a>
+      </div>
+      <div class="stack">
+        <span class="tag">Django</span>
+        <span class="tag">DRF</span>
+        <span class="tag">GeoDjango</span>
+        <span class="tag">Celery</span>
+        <span class="tag">PostgreSQL</span>
+      </div>
+      <p class="item-desc">Backend services for an IoT air-quality network across multiple African cities. Ingested and validated geo-tagged sensor readings; built async aggregation and reporting workflows tolerant of intermittent connectivity.</p>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title">Wazimap-NG</span>
+        <a class="item-link" href="https://github.com/OpenUpSA/wazimap-ng" target="_blank" rel="noopener">github.com/OpenUpSA</a>
+      </div>
+      <div class="stack">
+        <span class="tag">Django</span>
+        <span class="tag">DRF</span>
+        <span class="tag">GeoDjango</span>
+        <span class="tag">PostgreSQL</span>
+      </div>
+      <p class="item-desc">Census and survey visualization platform with nested administrative geographies and demographic indicators. Tuned PostgreSQL for spatial queries serving interactive visualizations across multiple African countries.</p>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title">11-node Elasticsearch cluster</span>
+      </div>
+      <div class="stack">
+        <span class="tag">Ansible</span>
+        <span class="tag">Elasticsearch</span>
+        <span class="tag">Kibana</span>
+        <span class="tag">Elastic Rally</span>
+      </div>
+      <p class="item-desc">Designed and deployed the cluster with custom Ansible roles for re-indexing, Index Lifecycle Management, and Snapshot Lifecycle Management. Benchmarked indexing and search performance with Elastic Rally.</p>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title">Self-hosted LLM platform</span>
+      </div>
+      <div class="stack">
+        <span class="tag">Ollama</span>
+        <span class="tag">OpenWebUI</span>
+      </div>
+      <p class="item-desc">Led the deployment of a self-hosted LLM platform to complement commercial providers — providing a private option for workloads where data sovereignty over sources and predictable inference costs mattered most.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">03 /</span>
+      <h2>Open Source</h2>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title"><a href="https://github.com/django/django" target="_blank" rel="noopener">Django</a></span>
+      </div>
+      <p class="item-desc">Bug fixes and documentation contributions to the core project.</p>
+    </div>
+
+    <div class="item">
+      <div class="item-top">
+        <span class="item-title"><a href="https://github.com/ckan/ckan" target="_blank" rel="noopener">CKAN</a></span>
+      </div>
+      <p class="item-desc">Extensions and plugin contributions for open dataset publishing platforms.</p>
+    </div>
+  </section>
+
+ <!--
+  <section>
+    <div class="section-header">
+      <span class="section-num">04 /</span>
+      <h2>Writing</h2>
+    </div>
+
+    {% if site.posts.size > 0 %}
+      {% for post in site.posts %}
+      <div class="post">
+        <a href="{{ post.url }}">{{ post.title }}</a>
+        <span class="post-date">{{ post.date | date: "%b %Y" }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="post">
+        <a href="/posts/diagnosing-celery-race-conditions.html">Diagnosing a Celery Beat race condition in production</a>
+        <span class="post-date">May 2026</span>
+      </div>
+    {% endif %}
+  </section>
+  -->
+
+  <footer>
+    <span>Built with HTML + CSS · No frameworks · Source on <a href="https://github.com/thepsalmist/thepsalmist.github.io" target="_blank" rel="noopener">GitHub</a></span>
+    <span class="build">Last deploy 2026.05</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
