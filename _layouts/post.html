@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ page.title }} — Xavier Frankline Odhiambo</title>
+<meta name="description" content="{{ page.description | default: page.excerpt | strip_html | truncate: 160 }}">
+<meta name="author" content="Xavier Frankline Odhiambo">
+
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="{{ page.description | default: page.excerpt | strip_html | truncate: 160 }}">
+<meta property="og:type" content="article">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23000%22/><text x=%2250%22 y=%2272%22 font-size=%2280%22 font-family=%22monospace%22 font-weight=%22700%22 fill=%22%23fde047%22 text-anchor=%22middle%22>X</text></svg>">
+
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-alt: #141414;
+    --text: #f5f5f0;
+    --text-soft: #c0c0bb;
+    --text-faint: #6e6e6b;
+    --accent: #fde047;
+    --rule: #232323;
+    --rule-strong: #2e2e2e;
+    --code-bg: #161616;
+    --mono: 'JetBrains Mono', 'Berkeley Mono', 'SF Mono', Menlo, ui-monospace, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafaf7;
+      --bg-alt: #f0f0eb;
+      --text: #0a0a0a;
+      --text-soft: #2c2c2c;
+      --text-faint: #888885;
+      --accent: #ca8a04;
+      --rule: #e5e5e0;
+      --rule-strong: #d4d4d0;
+      --code-bg: #f0f0eb;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  /* Top nav */
+  .topnav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 3rem;
+  }
+
+  .topnav a {
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .topnav a:hover { color: var(--accent); }
+
+  .back-arrow { color: var(--accent); }
+
+  /* Article header */
+  article header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.7rem;
+    color: var(--text);
+  }
+
+  .post-meta {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .post-meta .dot {
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Article body */
+  article p {
+    margin: 0 0 1.25rem;
+    color: var(--text-soft);
+  }
+
+  article h2 {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+    line-height: 1.3;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  article h2::before {
+    content: "## ";
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  article h3 {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 2rem 0 0.75rem;
+    color: var(--text);
+  }
+
+  article h3::before {
+    content: "### ";
+    color: var(--accent);
+  }
+
+  article a {
+    color: var(--text);
+    text-decoration: none;
+    background: linear-gradient(to top, var(--accent) 0%, var(--accent) 2px, transparent 2px, transparent 100%);
+    padding-bottom: 1px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  article a:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  article strong {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  article em { color: var(--text-soft); }
+
+  article ul, article ol {
+    margin: 0 0 1.25rem;
+    padding-left: 1.5rem;
+    color: var(--text-soft);
+  }
+
+  article li { margin-bottom: 0.4rem; }
+
+  article code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--bg-alt);
+    color: var(--accent);
+    padding: 0.12em 0.4em;
+    border-radius: 2px;
+    border: 1px solid var(--rule-strong);
+  }
+
+  article pre {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    background: var(--code-bg);
+    color: var(--text);
+    padding: 1.1rem 1.3rem;
+    border-radius: 3px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border-left: 3px solid var(--accent);
+    border-top: 1px solid var(--rule-strong);
+    border-right: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  article pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    color: var(--text);
+    font-size: inherit;
+  }
+
+  article blockquote {
+    margin: 1.5rem 0;
+    padding: 0.2rem 0 0.2rem 1.2rem;
+    border-left: 3px solid var(--accent);
+    color: var(--text-soft);
+    font-style: italic;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  footer a {
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  footer a:hover { color: var(--accent); }
+
+  /* Mobile */
+  @media (max-width: 540px) {
+    body { font-size: 15.5px; }
+    .container { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.4rem; }
+    article h2 { font-size: 1rem; }
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--bg);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="topnav">
+    <a href="/"><span class="back-arrow">←</span> Xavier Odhiambo</a>
+    <span>Writing</span>
+  </div>
+
+  <article>
+    <header>
+      <h1>{{ page.title }}</h1>
+      <p class="post-meta">
+        <span>{{ page.date | date: "%b %-d, %Y" }}</span>
+        <span class="dot" aria-hidden="true"></span>
+        <span>Backend Engineering</span>
+      </p>
+    </header>
+
+    {{ content }}
+  </article>
+
+  <footer>
+    <span>Xavier Frankline Odhiambo · <a href="/">xodhiambo.com</a></span>
+    <span><a href="https://github.com/thepsalmist" target="_blank" rel="noopener">@thepsalmist</a></span>
+  </footer>
+
+</div>
+
+</body>
+</html>
