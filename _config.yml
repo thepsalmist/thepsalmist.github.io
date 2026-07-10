@@ -1,6 +1,7 @@
 title: Xavier Frankline Odhiambo
 description: Backend engineer based in Kenya. Python, Django, PostgreSQL, AWS.
 url: "https://xodhiambo.com"
+resume_url: "/resume.pdf"
 
 # Permalink format for posts: /posts/post-name.html
 permalink: /posts/:title.html
