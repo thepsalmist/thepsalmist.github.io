@@ -1,28 +1,36 @@
-title: Xavier Frankline Odhiambo
-description: Backend engineer based in Kenya. Python, Django, PostgreSQL, AWS.
+title: Xavier Odhiambo
+tagline: Senior Backend & Platform Engineer — Python, AWS, Ansible, AI/LLM
+description: >-
+  Senior Backend & Platform Engineer in Nairobi. Python, AWS, Ansible, AI/LLM.
+  Most recently a Senior Software Engineer at Search Atlas; previously three
+  years at Code for Africa building civic-tech data platforms.
 url: "https://xodhiambo.com"
-resume_url: "https://drive.google.com/file/d/13nsZvY0eW5Yn6LGouxMkdbXhVlqaxR-0/view?usp=sharing"
+baseurl: ""
+author:
+  name: Xavier Odhiambo
+  email: xavierfrank4@gmail.com
 
-# Permalink format for posts: /posts/post-name.html
-permalink: /posts/:title.html
+# Blog posts live at /blog/<slug>/
+permalink: /blog/:title/
 
-# Use kramdown for Markdown (Jekyll default)
 markdown: kramdown
+highlighter: rouge
 kramdown:
   input: GFM
   syntax_highlighter: rouge
 
-# Don't process these files through Liquid
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+feed:
+  path: /blog/feed.xml
+
+# Don't ship these to the built site
 exclude:
-  - README.md
   - Gemfile
   - Gemfile.lock
+  - README.md
   - vendor
-
-# Default layout for posts
-defaults:
-  - scope:
-      path: ""
-      type: "posts"
-    values:
-      layout: "post"
+  - LICENSE

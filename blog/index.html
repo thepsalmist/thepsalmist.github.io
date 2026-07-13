@@ -1,0 +1,27 @@
+---
+layout: default
+title: Writing
+description: >-
+  Technical deep-dives on backend engineering, networking, and AI
+  infrastructure — RouterOS, Tailscale, RAG pipelines, Elasticsearch.
+---
+<div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">tail -f writing.log</span></div>
+
+<div class="log">
+  {% for post in site.posts %}
+  <div class="logline">
+    <span class="ts">{{ post.date | date: "%Y-%m" }}</span>
+    <span class="tag-ok">[PUBLISHED]</span>
+    <a class="title" href="{{ post.url | relative_url }}">{{ post.title }}</a>
+  </div>
+  {% endfor %}
+
+  <div class="logline"><span class="ts">—</span><span class="tag-todo">[PLANNED]</span><span class="title">A remote MT5 development workflow with Tailscale</span></div>
+  <div class="logline"><span class="ts">—</span><span class="tag-todo">[PLANNED]</span><span class="title">Designing a gated multi-stage RAG pipeline</span></div>
+  <div class="logline"><span class="ts">—</span><span class="tag-todo">[PLANNED]</span><span class="title">Migrating the Mediacloud crawler</span></div>
+  <div class="logline"><span class="ts">—</span><span class="tag-todo">[PLANNED]</span><span class="title">Deploying a self-hosted LLM platform</span></div>
+</div>
+
+<p style="margin-top:32px;font-size:12px;color:var(--dim)">
+  Subscribe via <a href="{{ '/blog/feed.xml' | relative_url }}">RSS</a>.
+</p>

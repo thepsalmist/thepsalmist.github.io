@@ -1,0 +1,31 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {%- if page.title -%}
+    <title>{{ page.title }} — {{ site.title }}</title>
+  {%- else -%}
+    <title>{{ site.title }} — {{ site.tagline }}</title>
+  {%- endif %}
+
+  <meta name="description" content="{{ page.description | default: site.description | strip_newlines | strip }}">
+
+  {%- comment -%}
+  Social sharing: a post can set `ogTitle` in its frontmatter to use a
+  different (e.g. pre-SEO) title on social cards than in search results.
+  {%- endcomment -%}
+  <meta property="og:title" content="{{ page.ogTitle | default: page.title | default: site.title }}">
+  <meta property="og:description" content="{{ page.description | default: site.description | strip_newlines | strip }}">
+  <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
+  <meta property="og:url" content="{{ page.url | absolute_url }}">
+  <meta name="twitter:card" content="summary">
+
+  <link rel="canonical" href="{{ page.url | absolute_url }}">
+  <link rel="alternate" type="application/rss+xml" title="{{ site.title }} — Writing" href="{{ '/blog/feed.xml' | absolute_url }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/assets/css/terminal.css' | relative_url }}">
+
+  {% seo title=false %}
+</head>

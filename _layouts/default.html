@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include head.html %}
+<body>
+<div class="wrap">
+  <div class="statusbar">
+    <span><span class="dot">●</span> <a href="{{ '/' | relative_url }}">xodhiambo.com</a> · nairobi · UTC+3</span>
+    <span><a href="{{ '/blog/' | relative_url }}">writing.log</a></span>
+    <span>v.2026.07</span>
+  </div>
+
+  {{ content }}
+
+  <footer>
+    <span>Built with HTML + CSS · No frameworks</span>
+    <span>© {{ site.time | date: "%Y" }} Xavier Odhiambo</span>
+  </footer>
+</div>
+</body>
+</html>

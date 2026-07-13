@@ -1,3 +1,5 @@
 source "https://rubygems.org"
-gem "jekyll", "~> 4.3"
-gem "webrick", "~> 1.8"
+
+# Mirrors the exact Jekyll + plugin versions GitHub Pages runs,
+# so `bundle exec jekyll serve` locally matches production.
+gem "github-pages", group: :jekyll_plugins
