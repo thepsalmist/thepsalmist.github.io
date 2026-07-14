@@ -48,8 +48,3 @@ and `index.html`.
   `xodhiambo.com` at repo root if not configured in settings)
 - `jekyll-feed` serves RSS at /blog/feed.xml
 - `jekyll-sitemap` serves /sitemap.xml — submit to Google Search Console
-
-## Still TODO (content)
-
-- Confirm `/assets/resume.pdf` (currently Xavier_General_Resume_20260629)
-  is the resume to ship
