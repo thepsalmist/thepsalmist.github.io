@@ -25,18 +25,6 @@ bundle install
 bundle exec jekyll serve   # http://localhost:4000
 ```
 
-## Publish the MikroTik article
-
-1. Open `_posts/2026-06-15-nordvpn-mikrotik-ikev2-setup.md`
-2. Fix the date prefix in the filename to the real publish date
-3. Paste the article body below the frontmatter (replace the placeholder)
-4. Optionally set `ogTitle` for a different social-card title
-5. Commit and push — GitHub Pages builds automatically
-
-The post URL is controlled by the filename slug:
-`_posts/2026-06-20-nordvpn-mikrotik-ikev2-setup.md`
-→ `https://xodhiambo.com/blog/nordvpn-mikrotik-ikev2-setup/`
-
 ## Adding a new post
 
 Drop a new `YYYY-MM-DD-slug.md` in `_posts/` with:
