@@ -14,7 +14,7 @@ number, so nobody could justify changing anything.
 This is the whole path from "feels slow" to "fixed and proven": how to check whether you have
 this problem, how to measure it properly, what the fix is, and how to confirm it worked.
 
-**Repo:** [`thepsalmist/elasticsearch-rally`](https://github.com/thepsalmist/elasticsearch-rally)
+**Repo:** [`thepsalmist/es-query-benchmark`](https://github.com/thepsalmist/es-query-benchmark)
 (Rally track, seed script, and committed results)
 
 > **If you only read one thing:** run your slow query with `"profile": true` and look at
@@ -377,8 +377,8 @@ If you'd rather not point it at production first, the local path gives you a wor
 end run in about two minutes:
 
 ```bash
-git clone https://github.com/thepsalmist/elasticsearch-rally
-cd elasticsearch-rally
+git clone https://github.com/thepsalmist/es-query-benchmark
+cd es-query-benchmark
 docker compose up -d          # single-node Elasticsearch 8.17.1
 ./scripts/seed_index.sh       # create and seed a synthetic news-archive index
 ./create_track.sh             # render the domain lists into the operations
