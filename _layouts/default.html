@@ -5,16 +5,16 @@
 <div class="wrap">
   <div class="statusbar">
     <span><span class="dot">●</span> <a href="{{ '/' | relative_url }}">xodhiambo.com</a> · nairobi · UTC+3</span>
-    <nav>
-      <a href="{{ '/' | relative_url }}#work">work</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#experience">experience</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#stack">stack</a><span class="sep">·</span><a href="{{ '/blog/' | relative_url }}">writing</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#contact">contact</a>
-    </nav>
     <span>v.2026.08</span>
   </div>
+
+  <nav class="subnav">
+    <a href="{{ '/' | relative_url }}#experience">experience</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#work">work</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#stack">stack</a><span class="sep">·</span><a href="{{ '/blog/' | relative_url }}">writing</a><span class="sep">·</span><a href="{{ '/' | relative_url }}#contact">contact</a>
+  </nav>
 
   {{ content }}
 
   <footer>
-    <span>Built with HTML + CSS · No frameworks</span>
     <span>© {{ site.time | date: "%Y" }} Xavier Odhiambo</span>
   </footer>
 </div>
