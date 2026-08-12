@@ -19,6 +19,8 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .statusbar a{color:var(--dim)}
 .statusbar a:hover{color:var(--amber)}
 .statusbar .dot{color:var(--ok)}
+.statusbar nav a{padding:0 6px}
+.statusbar .sep{color:var(--line)}
 
 /* Prompt headers */
 .prompt{margin:56px 0 24px;font-size:14px}
@@ -56,6 +58,24 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .svc p{margin-top:10px;color:var(--text);font-size:13.5px;max-width:600px}
 .svc .meta{margin-top:12px;font-size:12px;color:var(--dim)}
 .svc .meta b{color:var(--text);font-weight:500}
+
+/* Employment history (last) */
+.hist{border-left:2px solid var(--line);padding-left:18px}
+.job{padding:12px 0}
+.job-head{display:grid;grid-template-columns:150px 106px 74px 1fr;gap:8px;align-items:baseline;font-size:13px}
+.job-head .host{color:var(--amber);font-weight:500}
+.job-head .role,.job-head .loc{color:var(--dim)}
+.job-head .when{color:var(--text);font-size:12.5px}
+.job-head .dur{color:var(--dim)}
+.job p{margin-top:9px;font-size:13.5px;max-width:620px}
+.job.compact p{color:var(--dim)}
+
+/* Config-style key/value blocks (stack, contact) */
+.conf{border-left:2px solid var(--line);padding-left:18px;font-size:13.5px}
+.conf .row{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:7px 0}
+.conf .k{color:var(--info)}
+.conf .v{color:var(--text);max-width:620px}
+.conf .status{font-size:11px;margin-right:4px}
 
 /* Log-style lists (writing, open source) */
 .log{border-left:2px solid var(--line);padding-left:18px}
@@ -111,4 +131,9 @@ footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);disp
   .svc{padding:18px 16px}
   .svc-head .unit{margin-left:0;width:100%}
   .logline .ts{min-width:auto}
+  .statusbar nav{order:3;width:100%}
+  .statusbar nav a:first-child{padding-left:0}
+  .job-head{grid-template-columns:1fr;gap:1px}
+  .job-head .when{margin-top:3px}
+  .conf .row{grid-template-columns:1fr;gap:1px;padding:9px 0}
 }
