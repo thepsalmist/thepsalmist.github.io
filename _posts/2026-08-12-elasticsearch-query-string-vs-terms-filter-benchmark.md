@@ -187,14 +187,16 @@ is a separate experiment.
 
 All operations ran at a 0% error rate.
 
-**Warm, `terms` is about 24% faster at p50** than the equivalent `query_string`, and
+**Warm, `query_string` is about 24% slower at p50** than the equivalent `terms` filter, and
 throughput goes from 45.9 to 68.4 ops/s. The 320-domain `query_string` is the slowest shape at
 every percentile, roughly 2x the single-domain control at p50, and its p90 is proportionally
 worse than its p50, meaning the tail degrades faster than the median.
 
 **Cold, the gap is much larger.** On the first un-warmed execution, the `query_string`
-operation took about 396 ms against about 90 ms for the `terms` variant. That is the number
-worth taking to a code review, and it is the robust finding here.
+operation took about 396 ms against about 90 ms for the `terms` variant. That is a single
+observation, not a distribution, so treat the magnitude as indicative rather than exact. It is
+large enough that it is unlikely to be noise, but confirm it on your own data with repeated
+cold runs before quoting a multiple.
 
 ### Four honest caveats before you quote these numbers
 
@@ -202,11 +204,13 @@ worth taking to a code review, and it is the robust finding here.
 collecting documents is nearly free, so parse and rewrite cost dominates the total. On a
 500-million-document index, rewrite cost stays roughly constant while the per-shard matching
 work grows a great deal. Expect the absolute milliseconds you save to go up and the
-*percentage* to come down. Measure on your own data rather than trusting 24% as a target.
+*percentage* to come down. Measure on your own data rather than treating a 24% gap as a
+target.
 
 **This is one run.** 50 iterations from a single race. Benchmark runs have natural variance,
-so repeat each race at least three times before you treat any single figure as settled. The
-cold-start difference is large enough to survive that; the 24% is indicative, not precise.
+so repeat each race at least three times before you treat any single figure as settled. That
+applies to the warm 24% and to the cold number alike — the cold gap is wide enough that
+repetition is unlikely to erase it, but it still rests on one execution.
 
 **The aggregations may be your real cost.** Every operation here carries a date histogram, two
 terms aggregations, and `track_total_hits: true`. Held constant, that is good experiment
