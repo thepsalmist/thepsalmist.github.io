@@ -27,6 +27,19 @@ plugins:
 feed:
   path: /blog/feed.xml
 
+# Social card for link previews. jekyll-seo-tag reads `image` from page data,
+# and has no site-wide default — this default supplies one for every page.
+# A post can override it with its own `image:` in front matter.
+defaults:
+  - scope:
+      path: ""
+    values:
+      image:
+        path: /assets/og-card.png
+        width: 1200
+        height: 630
+        alt: "Xavier Odhiambo — Senior Backend & Platform Engineer"
+
 # GA4 Measurement ID (G-XXXXXXXXXX). Loaded only when JEKYLL_ENV=production,
 # so local `jekyll serve` traffic never hits the property. Blank = analytics off.
 google_analytics: G-YFD6L2GHBB

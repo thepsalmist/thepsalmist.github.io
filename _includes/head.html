@@ -2,30 +2,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  {%- comment -%}
+  jekyll-seo-tag owns description, canonical, Open Graph, Twitter cards and
+  JSON-LD. It emits the title too, but with its own separator — `title=false`
+  suppresses that so the em-dash form below wins.
+  {%- endcomment -%}
   {%- if page.title -%}
     <title>{{ page.title }} — {{ site.title }}</title>
   {%- else -%}
     <title>{{ site.title }} — {{ site.tagline }}</title>
   {%- endif %}
 
-  <meta name="description" content="{{ page.description | default: site.description | strip_newlines | strip }}">
-
-  {%- comment -%}
-  Social sharing: a post can set `ogTitle` in its frontmatter to use a
-  different (e.g. pre-SEO) title on social cards than in search results.
-  {%- endcomment -%}
-  <meta property="og:title" content="{{ page.ogTitle | default: page.title | default: site.title }}">
-  <meta property="og:description" content="{{ page.description | default: site.description | strip_newlines | strip }}">
-  <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
-  <meta property="og:url" content="{{ page.url | absolute_url }}">
-  <meta name="twitter:card" content="summary">
-
   <link rel="icon" href="{{ '/favicon.ico' | relative_url }}" sizes="32x32">
   <link rel="icon" href="{{ '/favicon.svg' | relative_url }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ '/apple-touch-icon.png' | relative_url }}">
   <meta name="theme-color" content="#101216">
 
-  <link rel="canonical" href="{{ page.url | absolute_url }}">
   <link rel="alternate" type="application/rss+xml" title="{{ site.title }} — Writing" href="{{ '/blog/feed.xml' | absolute_url }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
