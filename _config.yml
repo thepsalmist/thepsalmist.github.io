@@ -27,6 +27,10 @@ plugins:
 feed:
   path: /blog/feed.xml
 
+# GA4 Measurement ID (G-XXXXXXXXXX). Loaded only when JEKYLL_ENV=production,
+# so local `jekyll serve` traffic never hits the property. Blank = analytics off.
+google_analytics: G-YFD6L2GHBB
+
 # Don't ship these to the built site
 exclude:
   - Gemfile
