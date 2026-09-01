@@ -38,11 +38,11 @@ down an otherwise fast cluster:
 
 | Check | Why it bites |
 |---|---|
-| Node roles and failure domains | Master, data and coordinating roles assigned deliberately, and allocation awareness set so a replica never lands in the same rack or zone as its primary |
-| Heap and bootstrap checks | Heap at most half of RAM and below ~31 GB, memory locking on, file-descriptor and `vm.max_map_count` limits raised. In production mode a node that fails a bootstrap check refuses to start, which is the kindest thing it can do to you |
-| Disk headroom | Watermarks understood, and enough free space that a merge or a shard recovery can't push a node into read-only |
-| Security | TLS between nodes and to clients, authentication on, and roles scoped to what each application actually needs |
-| Snapshots | A repository configured, a snapshot taken, and a restore actually tested. An untested restore is a hope |
+| Node roles and failure domains | [Master, data and coordinating roles](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/modules-node.html) assigned deliberately, and [allocation awareness](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/shard-allocation-awareness.html) set so a replica never lands in the same rack or zone as its primary |
+| Heap and bootstrap checks | [Heap at most half of RAM](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/advanced-configuration.html) and under the compressed-pointer threshold, which is 26 GB on most systems, memory locking on, file-descriptor and [`vm.max_map_count`](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/vm-max-map-count.html) limits raised. In production mode a node that fails a [bootstrap check](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/bootstrap-checks.html) refuses to start, which is the kindest thing it can do to you |
+| Disk headroom | [Watermarks](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/modules-cluster.html#disk-based-shard-allocation) understood, and enough free space that a merge or a shard recovery can't push a node into read-only |
+| Security | [TLS between nodes and to clients](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/secure-cluster.html), authentication on, and roles scoped to what each application actually needs |
+| Snapshots | A [repository](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/snapshot-restore.html) configured, a snapshot taken, and a restore actually tested. An untested restore is a hope |
 | Monitoring | Metrics and alerts live before the first real write, or the benchmark is the last time anybody measures this cluster |
 | Failure drills | Kill a node mid-write and watch it recover. Do a rolling restart. This is what "green" was never going to tell you |
 
@@ -76,21 +76,23 @@ own traffic:**
 
 Two terms worth pinning down, because everything below uses them. **p99** is the 99th
 percentile: the latency that 1% of requests exceed. It matters more than the median because
-the median describes the requests nobody complains about. And **service time versus latency**
-in Rally's reports is a real distinction. Service time is how long the request itself took,
-while latency also counts time the request spent waiting in a queue because the cluster
-couldn't keep up. When latency climbs but service time stays flat, you have found saturation.
+the median describes the requests nobody complains about. And [**service time versus
+latency**](https://esrally.readthedocs.io/en/stable/metrics.html) in Rally's reports is a real distinction. Service time is how long
+the request itself took, while latency also counts time the request spent waiting in a queue
+because the cluster couldn't keep up. When latency climbs but service time stays flat, you have
+found saturation.
 
 ## Step 2: Size the dataset to the cluster, not to your patience
 
 This is the step people skip, and skipping it invalidates everything downstream.
 
 **Size the corpus so the indexed data does not fit in the cluster's page cache.** Elasticsearch
-leans hard on the filesystem cache for hot parts of an index. If the whole thing fits in
-memory, every query is served from RAM and you are benchmarking page cache rather than
-hardware, and the result looks fantastic while meaning nothing. The working rule is an indexed
-size larger than the cluster's total RAM. The more precise target is production's own ratio of
-data to memory, because that is the cache hit rate you will actually live with.
+[leans hard on the filesystem cache](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/tune-for-search-speed.html) for hot parts of an index. If
+the whole thing fits in memory, every query is served from RAM and you are benchmarking page
+cache rather than hardware, and the result looks fantastic while meaning nothing. The working
+rule is an indexed size larger than the cluster's total RAM. The more precise target is
+production's own ratio of data to memory, because that is the cache hit rate you will actually
+live with.
 
 The harness generates a synthetic corpus: one JSON document per line, log-shaped, with a
 fixed random seed so every run uses identical data:
@@ -134,10 +136,10 @@ Set the shard layout to whatever you plan to run in production, too:
 TRACK_PARAMS="number_of_shards:3,number_of_replicas:1"
 ```
 
-One thing that trips people up here: `number_of_replicas: 1` means one replica **per primary
-shard**, not one spare copy of the index. Three shards with one replica is six shards in
-total, and Elasticsearch will never place a primary and its own replica on the same node.
-Inspect the index and you'll see all six:
+One thing that trips people up here: [`number_of_replicas: 1`](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/index-modules.html) means one
+replica **per primary shard**, not one spare copy of the index. Three shards with one replica is
+six shards in total, and Elasticsearch will never place a primary and its own replica on the
+same node. Inspect the index and you'll see all six:
 
 ```bash
 curl -s 'http://your-cluster:9200/_cat/shards/rally-acceptance?v&h=index,shard,prirep,state,docs,node'
@@ -160,8 +162,9 @@ not a convenient simplification of it.
 ## Step 3: Measure three things
 
 New-cluster acceptance comes down to three questions, and the harness has one challenge for
-each. (Rally calls a benchmark definition a **track**, and a named schedule of operations
-within it a **challenge**.)
+each. (Rally calls a benchmark definition a **track**, and a named schedule of operations within
+it a **challenge**. Its [glossary](https://esrally.readthedocs.io/en/stable/glossary.html) defines
+both, plus **race**.)
 
 | Challenge | The production question it answers |
 |---|---|
@@ -170,8 +173,9 @@ within it a **challenge**.)
 | `mixed-workload` | Do searches stay fast while we're indexing, which is always? |
 
 **`indexing-throughput`** deletes and recreates the index, bulk-loads the entire corpus with
-parallel clients, then refreshes and force-merges. Read the mean throughput in docs/s and
-confirm a 0% error rate. Errors here usually mean rejected bulk requests from a saturated
+parallel clients, then refreshes and
+[force-merges](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/indices-forcemerge.html).
+Read the mean throughput in docs/s and confirm a 0% error rate. Errors here usually mean rejected bulk requests from a saturated
 write queue, which is a fail regardless of the throughput number next to it.
 
 **`query-ladder`** runs the same filtered search at 10, 25 and 50 operations per second, then
@@ -239,8 +243,9 @@ TRACK_PARAMS="number_of_shards:3,number_of_replicas:1" \
 ./run_benchmark.sh
 ```
 
-Everything runs through the official `elastic/rally` Docker image, so there is no Rally
-install to maintain. Each run writes a CSV to `./benchmarks/` and full logs to `./logs/`.
+Everything runs through the official [`elastic/rally` Docker image](https://esrally.readthedocs.io/en/stable/docker.html), so there
+is no Rally install to maintain. Each run writes a CSV to `./benchmarks/` and full logs to
+`./logs/`.
 
 **This harness is destructive on purpose.** The write challenges delete and recreate their
 target index (`rally-acceptance` by default) because an acceptance benchmark has to load its
@@ -349,8 +354,8 @@ by symptom:
   faster ones.
 - **Query latency fine when quiet, poor while indexing:** write and read paths are contending.
   More nodes, or separate the workloads.
-- **Errors under load:** queues rejecting work. Find which thread pool, then fix the cause
-  rather than raising the queue size, which only converts errors into latency.
+- **Errors under load:** queues rejecting work. Find which [thread pool](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/modules-threadpool.html),
+  then fix the cause rather than raising the queue size, which only converts errors into latency.
 - **p99 far above p50:** often uneven shard sizing, or garbage collection pauses. Check heap
   before blaming the disk.
 
@@ -404,8 +409,9 @@ anything.
 
 **How many shards should I start with?**
 Benchmark the layout you plan to run rather than searching for a universal answer. As a
-starting point, aim for shards in the tens-of-gigabytes range and enough of them that writes
-spread across all your data nodes. Then test it, which is the entire point of the exercise.
+starting point, [aim for shards in the tens-of-gigabytes range](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/size-your-shards.html) and
+enough of them that writes spread across all your data nodes. Then test it, which is the entire
+point of the exercise.
 
 **Why is my cluster yellow during the run?**
 You declared replicas that can't be allocated, most often on a single-node cluster where a
@@ -417,7 +423,8 @@ Latency. It includes the queue wait that your users feel and that service time h
 
 **My cluster has TLS and authentication on. Will the runner connect?**
 Yes. Point `CA_CERT` at the authority that signed the cluster's HTTP certificate, and pass
-credentials through `CLIENT_OPTIONS`, which reaches Rally as `--client-options`:
+credentials through `CLIENT_OPTIONS`, which reaches Rally as
+[`--client-options`](https://esrally.readthedocs.io/en/stable/command_line_reference.html#client-options):
 
 ```bash
 ES_HOST=https://new-cluster:9200 CONFIRM_DESTRUCTIVE=yes \
