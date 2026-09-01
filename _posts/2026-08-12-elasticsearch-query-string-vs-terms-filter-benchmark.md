@@ -30,7 +30,8 @@ Three commands. Ten minutes. Do these before you change any code.
 
 ### 1a. Profile the slow query
 
-Take the exact query your application sends, and add `"profile": true` at the top level:
+Take the exact query your application sends, and add [`"profile": true`](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/search-profile.html)
+at the top level:
 
 ```bash
 curl -s -XPOST 'http://your-cluster:9200/your-index/_search?pretty' \
@@ -78,13 +79,14 @@ queries are effectively always cold, which is the case where the difference meas
 at its largest. This is normal when the domain list varies per user, per collection, or per
 saved search, because each distinct list is a different cache key.
 
-Worth knowing: Elasticsearch only caches filters on segments that hold a reasonable share of
-the index (more than 10,000 documents, or 3% of the index). On a small test index, caching may
-never kick in at all, which is a common reason a local test disagrees with production.
+Worth knowing: Elasticsearch [only caches filters on segments](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/query-cache.html) holding at
+least 10,000 documents *and* at least 3% of the shard's documents. On a small test index, caching
+may never kick in at all, which is a common reason a local test disagrees with production.
 
 ### 1c. Find the slow queries you don't know about
 
-If you don't already have a candidate query, turn on the slow log for the index:
+If you don't already have a candidate query, turn on the [slow log](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/index-modules-slowlog.html)
+for the index:
 
 ```bash
 curl -s -XPUT 'http://your-cluster:9200/your-index/_settings' \
@@ -146,9 +148,9 @@ You cannot answer this with a stopwatch against production, for three reasons:
 - **One sample is not a measurement.** You need percentiles across many runs, not one reading.
 
 [Elasticsearch Rally](https://esrally.readthedocs.io/) is Elastic's own benchmarking tool and
-handles all three. Its `benchmark-only` mode points at a cluster that already exists, never
-installs or configures anything, and just issues queries with a fixed number of warmup and
-measured iterations.
+handles all three. Its [`benchmark-only` pipeline](https://esrally.readthedocs.io/en/stable/pipelines.html#benchmark-only) points at
+a cluster that already exists, never installs or configures anything, and just issues queries with
+a fixed number of warmup and measured iterations.
 
 > **`benchmark-only` does not mean read-only.** It means Rally won't provision Elasticsearch
 > for you. A track's own operations can still create and delete indices if they're written
@@ -216,8 +218,8 @@ repetition is unlikely to erase it, but it still rests on one execution.
 terms aggregations, and `track_total_hits: true`. Held constant, that is good experiment
 design. In your production query it may well be the larger cost centre. If your profile output
 shows aggregation time dwarfing `rewrite_time`, fix that first: consider
-`track_total_hits: false` or a fixed threshold, and check whether every aggregation you request
-is actually rendered.
+[`track_total_hits: false`](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/search-your-data.html#track-total-hits) or a fixed threshold, and
+check whether every aggregation you request is actually rendered.
 
 **Caching favours `terms` more in production, not less.** These are steady-state single-client
 numbers on a tiny index where filter caching may not even engage. In a real mixed workload, a
@@ -238,9 +240,10 @@ parse. This is the `rewrite_time` you measured in Step 1.
 per segment, so an exact term is a fast seek. A pattern like `*example.com/section*` has to be
 expanded into every term it matches, and a leading wildcard cannot use the sort order at all.
 
-**Filter context skips scoring.** A `terms` clause inside `bool.filter` answers a yes/no
-question and never computes a relevance score. A `query_string` in query context is computing
-scores for a clause whose only job is inclusion. You pay for relevance you then ignore.
+**[Filter context](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/query-filter-context.html) skips scoring.** A `terms` clause inside
+`bool.filter` answers a yes/no question and never computes a relevance score. A `query_string` in
+query context is computing scores for a clause whose only job is inclusion. You pay for relevance
+you then ignore.
 
 **Cacheability.** Filter-context clauses can be cached as a bitset (one bit per document,
 saying matched or not) and reused across queries. A `query_string` in query context is not a
@@ -271,23 +274,24 @@ get the same benefit.
 
 ### Three traps that will bite you
 
-**Analysis mismatch, which fails silently.** `terms` does not analyze its input. It matches
-raw indexed terms exactly. If your `query_string` was hitting an analyzed `text` field and you
-point a `terms` filter at the same field, you will get zero results with no error. Target the
-`keyword` field or subfield, and make sure your values match exactly what was indexed:
+**Analysis mismatch, which fails silently.** [`terms` does not analyze its input](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/query-dsl-terms-query.html).
+It matches raw indexed terms exactly. If your `query_string` was hitting an analyzed `text` field
+and you point a `terms` filter at the same field, you will get zero results with no error. Target
+the `keyword` field or subfield, and make sure your values match exactly what was indexed:
 lowercase, no scheme, no `www.`, no trailing slash. Check your mapping first:
 
 ```bash
 curl -s 'http://your-cluster:9200/your-index/_mapping/field/canonical_domain?pretty'
 ```
 
-**There is a hard ceiling on list size.** `index.max_terms_count` defaults to 65,536 values per
-`terms` query. 320 is comfortably fine. If your list runs to tens of thousands, store it as a
-document and use a `terms` lookup instead of shipping the list in every request.
+**There is a hard ceiling on list size.** [`index.max_terms_count`](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/query-dsl-terms-query.html)
+defaults to 65,536 values per `terms` query. 320 is comfortably fine. If your list runs to tens of
+thousands, store it as a document and use a [`terms` lookup](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/query-dsl-terms-query.html#query-dsl-terms-lookup)
+instead of shipping the list in every request.
 
 **Wildcard URL patterns don't convert directly.** A `terms` filter cannot express
 `*example.com/section*`. If you genuinely need prefix or substring matching on URLs, that
-needs its own solution: a dedicated field with a `wildcard` type, or extracting the path
+needs its own solution: a dedicated field with the [`wildcard` type](https://www.elastic.co/guide/en/elasticsearch/reference/8.17/wildcard.html), or extracting the path
 segment you actually filter on into a `keyword` field at index time. Converting the exact
 domain matches to `terms` while leaving a handful of wildcards in a much smaller
 `query_string` is usually the pragmatic middle ground, and it still removes most of the parse

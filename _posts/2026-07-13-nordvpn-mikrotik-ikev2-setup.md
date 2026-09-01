@@ -32,7 +32,8 @@ Three phases:
 
 ## ⚠️ Three gotchas that silently break this exact setup
 
-- **FastTrack bypasses IPsec** → fixed in Delta 2 below (defconf ships a FastTrack rule).
+- **FastTrack [bypasses IPsec](https://help.mikrotik.com/docs/spaces/ROS/pages/130220087/Connection+tracking)** → fixed in Delta 2
+  below (defconf ships a FastTrack rule).
 - **DNS leaks** → fixed in Delta 1 (+ Phase 2.7).
 - **No kill switch by default** → optional rule in Phase 2.8.
 
@@ -42,8 +43,8 @@ Three phases:
 
 ### 1A. Verify what defconf already created
 
-All of these ship with the default configuration — verify them, but create **nothing** here;
-do not re-add.
+All of these ship with the [default configuration](https://help.mikrotik.com/docs/spaces/ROS/pages/167706788/Default+configurations) —
+verify them, but create **nothing** here; do not re-add.
 
 | What | Expected value | Status |
 |---|---|---|
@@ -108,6 +109,7 @@ set wlan2 disabled=no mode=ap-bridge ssid="MyWiFi-5G" band=5ghz-a/n/ac security-
 ```
 
 > Both wlan interfaces are already bridge ports on defconf, so no bridge-port commands are needed.
+> Full property reference: [Wireless Interface](https://help.mikrotik.com/docs/spaces/ROS/pages/8978446/Wireless+Interface).
 
 **Stop here and confirm normal internet works** (wired + WiFi) before touching the VPN.
 
@@ -115,7 +117,8 @@ set wlan2 disabled=no mode=ap-bridge ssid="MyWiFi-5G" band=5ghz-a/n/ac security-
 
 ## Phase 2 — NordVPN full tunnel (IKEv2 / IPsec EAP)
 
-IKEv2 EAP is fully supported on 6.49. You need your **NordVPN service credentials**
+[IKEv2 EAP](https://help.mikrotik.com/docs/spaces/ROS/pages/11993097/IPsec) is fully supported on 6.49. You need your
+[**NordVPN service credentials**](https://support.nordvpn.com/hc/en-us/articles/19685514639633-Changes-to-the-login-process-on-third-party-apps-and-routers)
 (NOT your account email/password): Nord Account → **NordVPN** → **Manual setup / Service
 credentials** → copy **Username** + **Password**.
 
@@ -181,8 +184,9 @@ this server); latency will rise (expected).
 
 ### 2.7 (Recommended) Push NordVPN DNS to clients so lookups ride the tunnel
 
-This hands your LAN clients NordVPN's DNS directly via DHCP. Because the queries are sourced
-from the LAN (192.168.88.x), they travel through the tunnel instead of leaking out the WAN:
+This hands your LAN clients [NordVPN's DNS servers](https://support.nordvpn.com/hc/en-us/articles/19587726859793-What-are-NordVPN-DNS-server-addresses)
+directly via DHCP. Because the queries are sourced from the LAN (192.168.88.x), they travel
+through the tunnel instead of leaking out the WAN:
 
 ```
 /ip dhcp-server network set [find address=192.168.88.0/24] dns-server=103.86.96.100,103.86.99.100
@@ -254,6 +258,9 @@ The IPsec tunnel re-establishes once PPPoE is up.
 add chain=forward action=change-mss new-mss=clamp-to-pmtu passthrough=yes \
   protocol=tcp tcp-flags=syn out-interface-list=WAN comment="MSS clamp for PPPoE/VPN"
 ```
+
+> PPPoE and IPsec each shrink the usable MTU, so without this some TCP sessions stall
+> mid-transfer. Property reference: [Mangle](https://help.mikrotik.com/docs/spaces/ROS/pages/48660587/Mangle).
 
 ### 3.5 Verify
 
