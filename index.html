@@ -33,7 +33,7 @@ layout: default
         <span class="role">Senior Software Engineer · Remote · US</span>
         <span class="dur">11 months</span>
       </div>
-      <p>Backend services for an agentic SEO platform — DRF APIs over Google Search Console, Analytics, Ads and Meta Ads. Extended the LLM orchestration layer with multi-provider routing, automatic failover, and cost-aware model selection. Instrumented Django and Celery with OpenTelemetry, and tuned PostgreSQL and ClickHouse for high-volume analytics tables.</p>
+      <p>Backend services for an agentic SEO platform: DRF APIs and Celery workers over Google Search Console, Analytics, Ads and Meta Ads. Extended the LLM orchestration layer with multi-provider routing, automatic failover, and cost-aware model selection. Fixed a Celery Beat race that sent customers duplicate report emails, using Redis-backed distributed locks. Instrumented Django and Celery with OpenTelemetry, and tuned PostgreSQL and ClickHouse for high-volume analytics tables. Claude Code was the daily workflow, from issue-driven plans through AI-assisted review in CI.</p>
     </div>
 
     <div class="job">
@@ -45,7 +45,7 @@ layout: default
         <span class="role">Senior Software Engineer · Remote · pan-African</span>
         <span class="dur">3 years</span>
       </div>
-      <p>Backend and infrastructure for civic-tech platforms used by researchers, journalists, and policy teams across Africa. Led the architecture and Ansible-driven deployment of multi-node Elasticsearch clusters, gated on a Rally benchmark harness before production traffic. Built end-to-end observability on Grafana, Prometheus, Loki, and Alertmanager, and drove CI/CD adoption across engineering teams.</p>
+      <p>Backend and infrastructure for civic-tech and open-data platforms used by researchers, journalists, and policy teams across Africa. Lead maintainer of openAFRICA, the CKAN-based open-data portal, through upgrades from CKAN 2.8 to 2.11. Led the architecture and Ansible-driven deployment of multi-node Elasticsearch clusters, gated on a Rally benchmark harness before production traffic. Built end-to-end observability on Grafana, Prometheus, Loki, and Alertmanager, and drove CI/CD adoption across engineering teams.</p>
     </div>
 
     <div class="job">
@@ -57,7 +57,7 @@ layout: default
         <span class="role">Software Engineer · On-site · Nairobi</span>
         <span class="dur">1 yr 4 mo</span>
       </div>
-      <p>Tendersure Africa, a B2B procurement SaaS — Django and Vue.js with localised payment gateways, signed callbacks, and idempotent retries; Terraform provisioning, VM-to-ECS container migration, CloudWatch and Prometheus alerting.</p>
+      <p>Tendersure Africa, a B2B procurement SaaS: Django and Vue.js in English, French, Portuguese and Amharic, with localised payment gateways, signed callbacks, and idempotent retries; Terraform provisioning, VM-to-ECS container migration, CloudWatch and Prometheus alerting.</p>
     </div>
 
     <div class="job">
@@ -81,7 +81,7 @@ layout: default
         <span class="role">Software Engineer · On-site · Nairobi</span>
         <span class="dur">1 year</span>
       </div>
-      <p>Built jobsearchke.com from scratch — Django, PostgreSQL, and JavaScript, deployed on DigitalOcean behind Docker and Nginx.</p>
+      <p>First engineer on the product: built jobsearchke.com from scratch in Django, PostgreSQL, and JavaScript, deployed on DigitalOcean behind Docker and Nginx.</p>
     </div>
   </div>
 </section>
@@ -129,6 +129,15 @@ layout: default
 
   <article class="svc">
     <div class="svc-head">
+      <span class="status running">●</span><h3>openAFRICA</h3>
+      <span class="unit">openafrica.service</span>
+    </div>
+    <p>Lead maintainer of Code for Africa's CKAN-based open-data portal and its custom extensions. Carried it through CKAN upgrades from 2.8 to 2.11, including the move to Python 3, and migrated its legacy controllers to Flask blueprints.</p>
+    <div class="meta">stack: <b>CKAN · Python · Flask</b></div>
+  </article>
+
+  <article class="svc">
+    <div class="svc-head">
       <span class="status running">●</span><h3>Mediacloud Story-Indexer</h3>
       <span class="unit">story-indexer.service</span>
     </div>
@@ -160,7 +169,7 @@ layout: default
       <span class="lvl personal">PERSONAL</span>
       <span class="unit">mt5-bot.service</span>
     </div>
-    <p>Modular Python bot on MetaTrader 5 with a shared-code backtester, Telegram notifications, and multi-config isolation via magic numbers.</p>
+    <p>Live XAU/USD trading bot in Python on MetaTrader 5, running several strategy configurations in parallel with Telegram trade notifications. Every strategy change is validated in a custom backtester against historical data before going live, with position and exposure limits enforced in code.</p>
     <div class="meta">stack: <b>Python · MetaTrader 5 · Tailscale</b></div>
   </article>
 </section>
@@ -169,10 +178,10 @@ layout: default
   <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">cat stack.yml</span></div>
   <div class="conf">
     <div class="row"><span class="k">languages:</span><span class="v">Python · JavaScript · TypeScript · SQL · Bash</span></div>
-    <div class="row"><span class="k">backend:</span><span class="v">Django · DRF · FastAPI · Flask · Celery</span></div>
-    <div class="row"><span class="k">data:</span><span class="v">PostgreSQL · ClickHouse · Elasticsearch · Redis · MongoDB</span></div>
-    <div class="row"><span class="k">cloud:</span><span class="v">AWS (EC2 · ECS · RDS · Lambda · S3 · Route 53) · Docker · Kubernetes · Terraform · Ansible</span></div>
-    <div class="row"><span class="k">ci/cd:</span><span class="v">GitHub Actions · GitLab CI · Bitbucket Pipelines</span></div>
+    <div class="row"><span class="k">backend:</span><span class="v">Django · DRF · FastAPI · Flask · Celery · RabbitMQ · asyncio</span></div>
+    <div class="row"><span class="k">data:</span><span class="v">PostgreSQL · ClickHouse · Elasticsearch · Redis · MongoDB · Alembic</span></div>
+    <div class="row"><span class="k">cloud:</span><span class="v">AWS (EC2 · ECS · RDS · Lambda · S3 · Route 53) · GCP · Docker · Kubernetes · Terraform · Ansible · Linux</span></div>
+    <div class="row"><span class="k">ci/cd:</span><span class="v">GitHub Actions · GitLab CI · Bitbucket Pipelines · pytest</span></div>
     <div class="row"><span class="k">observability:</span><span class="v">OpenTelemetry · Grafana · Prometheus · Loki · Tempo · Sentry</span></div>
     <div class="row"><span class="k">ai:</span><span class="v">LlamaIndex · pgvector · OpenRouter · Ollama · OpenWebUI</span></div>
     <div class="row"><span class="k">certs:</span><span class="v">AWS Solutions Architect – Associate (2025) · AWS Cloud Practitioner (2022)</span></div>
