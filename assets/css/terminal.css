@@ -29,13 +29,15 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 
 /* Prompt headers */
 .prompt{margin:56px 0 24px;font-size:14px}
+.subnav + .prompt{margin-top:32px}
 .prompt .user{color:var(--dim)}
 .prompt .cmd{color:var(--amber);font-weight:500}
 .cursor{display:inline-block;width:8px;height:16px;background:var(--amber);vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
 /* Hero */
-.hero{padding-top:48px}
+.hero{padding-top:32px}
+.hero .prompt{margin-top:0}
 .hero h1{font-size:clamp(28px,5.5vw,44px);font-weight:700;color:#E9EDF2;letter-spacing:-.01em;line-height:1.15}
 .hero .role{margin-top:10px;color:var(--amber);font-size:14px}
 .hero p{margin-top:22px;max-width:600px;color:var(--text)}
@@ -93,7 +95,7 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--dim)}
 
 /* ---------- Blog post pages ---------- */
-.post-header{padding-top:48px;border-bottom:1px solid var(--line);padding-bottom:32px}
+.post-header{padding-top:32px;border-bottom:1px solid var(--line);padding-bottom:32px}
 .post-header h1{font-size:clamp(24px,4.5vw,36px);font-weight:700;color:#E9EDF2;line-height:1.2;letter-spacing:-.01em;max-width:680px}
 .post-header .postmeta{margin-top:14px;font-size:12px;color:var(--dim)}
 .post-header .postmeta .tag-ok{color:var(--ok)}
