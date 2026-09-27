@@ -1,19 +1,10 @@
 ---
 layout: post
 title: "How to Set Up Dokku on Ubuntu 24.04 with Ansible (Hardened, Re-runnable Bootstrap)"
-ogTitle: "The SSH Checks Behind My Ansible Server Bootstrap"
 slug: dokku-ubuntu-ansible-bootstrap
 permalink: /blog/dokku-ubuntu-ansible-bootstrap/
 date: 2026-09-27 09:00:00 +0300
 description: "An Ansible playbook that takes a fresh Ubuntu 22.04/24.04 VPS to a hardened Dokku host: SSH hardening validated against the effective sshd config with best-effort rollback, ufw, fail2ban, and Docker and a version-pinned Dokku from signed apt repositories."
-keywords:
-  - dokku ansible
-  - install dokku ubuntu 24.04
-  - ansible ubuntu server hardening
-  - passwordauthentication no not working
-  - fail2ban banned my ip ansible
-  - docker bypasses ufw
-  - dokku plugins pin version
 tags: [ansible, dokku, ubuntu, ssh, fail2ban, docker, infrastructure]
 ---
 

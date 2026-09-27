@@ -1,20 +1,11 @@
 ---
 layout: post
 title: "How to Monitor Dokku Apps with Prometheus, Loki and Grafana (Ansible Setup)"
-ogTitle: "Two Dashboard Panels That Lied, and Other Notes on Monitoring a Dokku Host"
 slug: dokku-monitoring-prometheus-loki-grafana
 permalink: /blog/dokku-monitoring-prometheus-loki-grafana/
 date: 2026-09-27 10:00:00 +0300
 image: /assets/images/blog/dokku-monitoring-prometheus-loki-grafana/server-overview.png
 description: "Self-hosted monitoring for a Dokku server: host and container metrics, per-app health checks and certificate expiry, nginx access logs in Loki, and Grafana as a Dokku app, all deployed by one Ansible role."
-keywords:
-  - dokku monitoring
-  - dokku prometheus grafana
-  - dokku logs loki
-  - grafana alloy docker logs
-  - nginx json access log loki
-  - cadvisor container name upcoming
-  - fail2ban logpath ignored ubuntu 24.04
 tags: [dokku, prometheus, loki, grafana, observability, ansible, infrastructure]
 ---
 
@@ -38,7 +29,7 @@ The stack is seven services: Prometheus, Loki, Alloy (log shipping), node-export
 
 The six collectors don't, and they need things Dokku apps aren't built for: host mounts, the host PID namespace, the Docker socket, and in cAdvisor's case privileged mode. They run as a plain Compose project in `/opt/observability`.
 
-Grafana does serve the public. It needs a domain, an nginx vhost and a TLS certificate, which Dokku already does for every other app. So Grafana is deployed **as a Dokku app**, and gets its HTTPS the same way `jobtracker` does.
+Grafana does serve the public. It needs a domain, an nginx vhost and a TLS certificate, which Dokku already does for every other app. So Grafana is deployed **as a Dokku app**, and gets its HTTPS the same way as any other Dokku app.
 
 It's worth being blunt about the cost of the collectors. Prometheus, Alloy and cAdvisor can all read the Docker socket, and cAdvisor runs privileged, so all three are effectively root. Keeping them off the public internet, which the next section covers, reduces the exposure, but it isn't a justification on its own. Any app attached to the `observability` network can reach Prometheus, Loki and the exporters directly, and none of them require authentication. I accept that trust boundary because every app on this host is mine. On a server running code you don't fully trust, you'd want separate networks or authentication in front of those services.
 
@@ -145,7 +136,7 @@ These are my favourite bugs from the project, because both panels looked complet
 
 On a Dokku host, every deploy pulls images and builds layers, so free space drops sharply for a few minutes. A straight line through six hours of that projects the dip forward forever, and a mostly empty disk read as days from full. Disk use on a deploy server moves in steps, not trends. The tile now just shows free space: 81.7 GiB in the screenshot, which is the number I actually act on.
 
-**Every container kept its temporary name for life.** Dokku starts a new container as something like `jobtracker.web.1.upcoming-12345`, checks it's healthy, then renames it. cAdvisor records the name the first time it sees a container and never updates it, so the "top containers" panels showed `.upcoming` names for containers that had been running for days. The fix is to stop trusting the name and build one from Dokku's labels, which never change:
+**Every container kept its temporary name for life.** Dokku starts a new container as something like `myapp.web.1.upcoming-12345`, checks it's healthy, then renames it. cAdvisor records the name the first time it sees a container and never updates it, so the "top containers" panels showed `.upcoming` names for containers that had been running for days. The fix is to stop trusting the name and build one from Dokku's labels, which never change:
 
 ```promql
 sort_desc(topk(8, sum by (name) (
