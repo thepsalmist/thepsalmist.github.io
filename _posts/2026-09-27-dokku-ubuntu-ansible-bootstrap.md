@@ -18,7 +18,7 @@ A couple of steps that had always "worked" turned out not to do what I thought. 
 
 ## sshd keeps the first value it reads
 
-Disabling password login is one line in `/etc/ssh/sshd_config`. On Ubuntu, that line can leave password login enabled, even after a reload that reports success. The reason is the first line of the same file, which most people scroll past:
+Disabling password login is one line in `/etc/ssh/sshd_config`. On Ubuntu, that line can leave password login enabled, even after a reload that reports success. The reason is the first setting in the same file, which most people scroll past:
 
 ```
 Include /etc/ssh/sshd_config.d/*.conf
