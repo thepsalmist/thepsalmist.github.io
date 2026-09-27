@@ -8,9 +8,11 @@ description: "An Ansible playbook that takes a fresh Ubuntu 22.04/24.04 VPS to a
 tags: [ansible, dokku, ubuntu, ssh, fail2ban, docker, infrastructure]
 ---
 
-`PasswordAuthentication no` is probably the most copied line of server hardening advice on the internet. On a lot of Ubuntu cloud images, it does nothing.
+Setting `PasswordAuthentication no` in `/etc/ssh/sshd_config` can leave password login enabled. On Ubuntu, a file included earlier in the config may already set the value, and sshd keeps that earlier value, even after a reload that reports success.
 
-I found that out while turning my own Dokku server checklist into an Ansible playbook. The checklist was the usual one: create a user, copy a key, edit `sshd_config`, enable ufw, install fail2ban, pipe Docker's and Dokku's install scripts into bash. It had worked, as far as I could tell, which turned out to be the problem. Two of those steps can fail without saying anything, one of them can lock you out, and none of it is the same twice when you run it by hand on servers a week apart.
+I ran into this while turning my Dokku server checklist into an Ansible playbook. The checklist was familiar: create a user, copy an SSH key, disable password login, enable ufw, install fail2ban, then pipe Docker's and Dokku's install scripts into bash. I had treated commands that finished without errors as evidence that the server was configured correctly.
+
+Automating the checklist meant checking those assumptions. Was password authentication actually disabled? Could the new admin log in before I removed root access? Would installing fail2ban ban the machine running the playbook? And what would happen when I ran it all again?
 
 The result is [ansible-server-bootstrap](https://github.com/thepsalmist/ansible-server-bootstrap). It takes a fresh Ubuntu 22.04 or 24.04 server to a hardened Docker and Dokku host, and it's built to converge: a second run should report `changed=0` as long as the configuration hasn't changed and no new package updates have been published (the base role runs an apt upgrade). This post is about the parts that were harder than they looked.
 
