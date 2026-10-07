@@ -75,7 +75,7 @@ otelcol.processor.batch "default" {
 
 Prometheus 3 accepts OTLP directly once it's started with `--web.enable-otlp-receiver`, so metrics don't need a separate gateway. Tempo is the one new service in the Compose project, with local disk storage and seven days of retention.
 
-The OTLP ports listen only on the `observability` Docker network. Apps join it the same way they did for scraping, with `network:set ... attach-post-deploy`. Nothing is published on the host and ufw needs no new rule. It's the same trust boundary as before: any app on that network can send telemetry, and every app on this server is mine.
+The OTLP ports listen only on the `observability` Docker network. Apps join it with `network:set ... attach-post-create`, not the `attach-post-deploy` that scraping used: post-deploy skips one-off `dokku run` containers, and those send telemetry now too. Nothing is published on the host and ufw needs no new rule. It's the same trust boundary as before: any app on that network can send telemetry, and every app on this server is mine.
 
 ## Making pushed metrics look like scraped ones
 
@@ -128,9 +128,9 @@ Pushing solves the four-workers problem only if Prometheus can tell the workers 
 `OTEL_SERVICE_NAME` can't fix this, because Dokku config applies to every process of an app. So two resource attributes are set in the app's code, at startup:
 
 - `service.instance.id`: unique per process, for example the hostname plus the PID.
-- `process_type`: `web` or `worker`, so the dashboards can split them the way they already do for container metrics.
+- `process_type`: `web`, `worker`, or `command` for one-off management commands, so the dashboards can split them the way they already do for container metrics.
 
-In a Python app, that looks something like this:
+In the Django app from the trace above, trimmed down, that's one function:
 
 ```python
 import os
@@ -139,6 +139,9 @@ import socket
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.django import DjangoInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -146,22 +149,39 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
-def setup_telemetry(process_type: str) -> None:
-    # service.name and deployment.environment come from the OTEL_* environment variables.
+def configure(process_type):
+    # Unset in local dev and tests, so nothing tries to reach Alloy
+    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        return
+    # service.name and deployment.environment come from the OTEL_* environment variables
     resource = Resource.create({
-        "process_type": process_type,
         "service.instance.id": f"{socket.gethostname()}-{os.getpid()}",
+        "process_type": process_type,
     })
 
     tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(timeout=5)))
     trace.set_tracer_provider(tracer_provider)
 
-    reader = PeriodicExportingMetricReader(OTLPMetricExporter())
+    reader = PeriodicExportingMetricReader(OTLPMetricExporter(timeout=5))
     metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
+
+    DjangoInstrumentor().instrument()
+    PsycopgInstrumentor().instrument()
+    HTTPXClientInstrumentor().instrument()
 ```
 
-Call it once in each process, after any fork. The exporters run background threads, and a thread started before a fork doesn't exist in the child.
+The three instrumentors are what produce spans: one per request, database query and outbound HTTP call. The job runner has no instrumentation of its own, so a small task middleware opens a span per job, named after the task. That's the root span in the trace at the top. The full version also adds a sampler that drops queries made outside any request or job, such as the worker polling its queue. Without it, every poll becomes a trace of its own.
+
+Call `configure` once in each process, after any fork. The exporters run background threads, and a thread started before a fork doesn't exist in the child. Under gunicorn, `wsgi.py` is the place: each worker imports it after the fork, as long as gunicorn runs without `--preload`. It also has to run before `get_wsgi_application()`, because the Django instrumentation works by adding a middleware:
+
+```python
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+telemetry.configure("web")
+application = get_wsgi_application()
+```
+
+`manage.py` covers every other process: it calls `configure("worker")` before starting the job runner, and `configure("command")` for anything else, with the command wrapped in a span of its own.
 
 ## From a log line to its trace, and back
 
@@ -190,7 +210,7 @@ tracesToLogsV2:
 
 Both directions depend on the same convention as the metrics: the service name is the Dokku app name. One name joins all three signals.
 
-One detail to watch: some OpenTelemetry setups export logs over OTLP too. This pipeline has no logs output, so set `OTEL_LOGS_EXPORTER=none` and keep logs on stdout, where Dokku and Loki already handle them.
+One detail to watch: setting the SDK up in code, as above, exports only traces and metrics, but the zero-code `opentelemetry-instrument` wrapper reads `OTEL_LOGS_EXPORTER` and can send logs over OTLP too. This pipeline has no logs output, so if you use the wrapper, set `OTEL_LOGS_EXPORTER=none` and keep logs on stdout, where Dokku and Loki already handle them.
 
 ## Running it yourself
 
@@ -199,7 +219,7 @@ On a host set up with the [bootstrap playbook](/blog/dokku-ubuntu-ansible-bootst
 ```bash
 ansible-playbook site.yml --tags observability
 
-dokku network:set myapp attach-post-deploy observability
+dokku network:set myapp attach-post-create observability
 dokku config:set myapp \
   OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318 \
   OTEL_SERVICE_NAME=myapp \
