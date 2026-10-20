@@ -19,6 +19,15 @@ layout: default
     {{ content }}
   </div>
 
+  <aside>
+    <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">whoami</span></div>
+    <div class="conf">
+      <div class="row"><span class="k">author:</span><span class="v">Xavier Odhiambo, senior backend &amp; platform engineer</span></div>
+      <div class="row"><span class="k">status:</span><span class="v"><span class="status running">●</span> available now for remote senior backend, platform, and SRE roles</span></div>
+      <div class="row"><span class="k">contact:</span><span class="v"><a href="{{ '/assets/resume.pdf' | relative_url }}">resume.pdf</a> · <a href="mailto:xavierfrank4@gmail.com">xavierfrank4@gmail.com</a> · <a href="https://www.linkedin.com/in/xavierodhiambo76">linkedin</a></span></div>
+    </div>
+  </aside>
+
   <nav class="post-nav">
     {% if page.previous %}
       <a href="{{ page.previous.url | relative_url }}">← {{ page.previous.title }}</a>
