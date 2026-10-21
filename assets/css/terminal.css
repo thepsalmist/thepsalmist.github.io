@@ -42,10 +42,10 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .hero .role{margin-top:10px;color:var(--amber);font-size:14px}
 .hero p{margin-top:22px;max-width:600px;color:var(--text)}
 .hero .links{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;font-size:13px}
-.hero .links a{border:1px solid var(--line);border-radius:4px;padding:6px 14px;color:var(--text)}
-.hero .links a:hover{border-color:var(--amber);color:var(--amber-hi);text-decoration:none}
-.hero .links a.primary{background:var(--amber);color:#14100A;border-color:var(--amber);font-weight:500}
-.hero .links a.primary:hover{background:var(--amber-hi);color:#14100A}
+.hero .links a,.svc .actions a{border:1px solid var(--line);border-radius:4px;padding:6px 14px;color:var(--text)}
+.hero .links a:hover,.svc .actions a:hover{border-color:var(--amber);color:var(--amber-hi);text-decoration:none}
+.hero .links a.primary,.svc .actions a.primary{background:var(--amber);color:#14100A;border-color:var(--amber);font-weight:500}
+.hero .links a.primary:hover,.svc .actions a.primary:hover{background:var(--amber-hi);color:#14100A}
 
 /* About */
 .about p{max-width:640px;margin-bottom:14px;color:var(--text)}
@@ -65,6 +65,27 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .svc p{margin-top:10px;color:var(--text);font-size:13.5px;max-width:600px}
 .svc .meta{margin-top:12px;font-size:12px;color:var(--dim)}
 .svc .meta b{color:var(--text);font-weight:500}
+
+/* Live products (systemctl status) */
+.svc.building{border-style:dashed;border-color:#3A4250}
+.status.activating{color:var(--amber)}
+.lvl.live{color:#14100A;background:var(--ok)}
+.lvl.building{color:var(--amber);border:1px solid var(--amber)}
+.lvl.white-label{color:var(--info);border:1px solid var(--info)}
+.sysd{margin-top:12px;font-size:12.5px;display:grid;grid-template-columns:72px minmax(0,1fr);gap:2px 12px}
+.sysd .k{color:var(--info);text-align:right}
+.sysd .ok{color:var(--ok)}
+.sysd .warn{color:var(--amber)}
+.svc-body{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.svc-body p{margin-top:0}
+.svc ul{margin-top:12px;padding-left:18px;font-size:13px}
+.svc li{margin-bottom:6px}
+.shot{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg)}
+.shot .bar{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--dim)}
+.shot .bar i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.shot .bar span{margin-left:6px}
+.shot img{display:block;width:100%;height:auto}
+.svc .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;font-size:13px}
 
 /* Employment history (last) */
 .job{border-left:2px solid var(--amber);padding:2px 0 26px 22px}
@@ -130,12 +151,24 @@ footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);disp
 .highlight .o{color:var(--text)}
 .highlight .nv{color:var(--info)}
 
+/* Project pages: diagrams, Procfiles and decision logs inside a post body */
+.post-body pre .p{color:var(--amber)}
+.post-body pre .s{color:var(--info)}
+.post-body pre .d{color:var(--dim)}
+.post-body pre.diagram code{line-height:1.5}
+.post-body .log{font-family:'JetBrains Mono',monospace;margin-bottom:18px}
+
 /* Post footer nav */
 .post-nav{border-top:1px solid var(--line);padding:24px 0;font-size:13px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
 @media (max-width:600px){
   .svc{padding:18px 16px}
   .svc-head .unit{margin-left:0;width:100%}
+  .svc-body{grid-template-columns:1fr;gap:16px}
+  .svc-body .shot{order:-1}
+  .sysd{grid-template-columns:1fr;gap:1px}
+  .sysd .k{text-align:left}
+  .svc .actions a{padding:11px 16px}
   .logline .ts{min-width:auto}
   .subnav a{padding:0 7px}
   .job{padding-left:16px}

@@ -1,0 +1,65 @@
+---
+layout: default
+title: "Pitrova: what a car really costs, on one small server"
+description: >-
+  How Pitrova is built and run: Next.js, FastAPI, Postgres, Redis and
+  Procrastinate on one Dokku server, with storage and backups on Cloudflare R2.
+---
+<article>
+  <header class="post-header">
+    <div class="prompt" style="margin-top:0;margin-bottom:20px">
+      <span class="user">xavier@nairobi:~$</span>
+      <span class="cmd">cat projects/pitrova/README.md</span>
+    </div>
+    <h1>{{ page.title }}</h1>
+    <div class="postmeta">
+      <span class="tag-ok">[LIVE]</span>
+      <a href="https://pitrova.xodhiambo.com">pitrova.xodhiambo.com ↗</a>
+      · Next.js · FastAPI · Postgres · Redis · Procrastinate · R2 · Dokku
+    </div>
+  </header>
+
+  <div class="post-body">
+    <h2 style="margin-top:0">What it is</h2>
+    <p>Kenyan car owners log a fill-up or a service in under a minute. Pitrova adds it up: monthly spend, cost per kilometre, fuel economy from full tank to full tank, and the services and bills coming next.</p>
+
+    <h2>Shape</h2>
+    <p>A modular monolith in three processes. The browser only talks to the web app, which forwards <code>/api/v1</code> to the API, so the browser sees a single origin.</p>
+<pre class="diagram"><code><span class="d">browser</span> -> Cloudflare -> Dokku nginx -> <span class="p">web</span>  Next.js 16 · PWA
+                                        |  <span class="d">/api/v1 forwarded</span>
+                                        v
+<span class="s">Redis 7</span> &lt;------------------------------ <span class="p">api</span>  FastAPI -> <span class="s">R2</span> <span class="d">receipts, photos</span>
+<span class="d">sessions · cache · rate limits</span>          |  <span class="d">defer job</span>
+                                        v
+                                    <span class="s">Postgres 16</span> &lt;-- <span class="p">worker</span>  Procrastinate
+                                    <span class="d">data + job queue</span>
+                                        |  <span class="d">nightly dump</span>
+                                        v
+                                    <span class="s">R2 backups</span>  <span class="d">own bucket, own keys</span>
+
+<span class="d">api, worker -- OpenTelemetry over OTLP/HTTP --> Alloy</span></code></pre>
+
+    <h2>Deploy</h2>
+    <p><code>git push dokku main</code>. The release phase creates the job schema and runs Alembic before the worker and API restart, so new code never meets an old schema.</p>
+<pre><code><span class="d"># apps/api/Procfile</span>
+<span class="p">web:</span>     uvicorn milemind.api.app:create_app --factory --no-proxy-headers …
+<span class="p">worker:</span>  python -m milemind.jobs.worker
+<span class="p">release:</span> python -m milemind.jobs.schema &amp;&amp; alembic upgrade head</code></pre>
+
+    <h2>Decisions</h2>
+    <p>Twelve decision records so far. The ones that shaped how it runs:</p>
+    <div class="log">
+      <div class="logline"><span class="ts">ADR 0001</span><span class="title">Modular monolith, three processes</span></div>
+      <div class="logline"><span class="ts">ADR 0004</span><span class="title">AI output requires explicit user confirmation</span></div>
+      <div class="logline"><span class="ts">ADR 0005</span><span class="title">Procrastinate on PostgreSQL for background jobs</span></div>
+      <div class="logline"><span class="ts">ADR 0006</span><span class="title">Redis responsibilities and key conventions</span></div>
+      <div class="logline"><span class="ts">ADR 0009</span><span class="title">The web app forwards /api to the API</span></div>
+      <div class="logline"><span class="ts">ADR 0012</span><span class="title">Dokku on one server, storage and backups on Cloudflare R2</span></div>
+    </div>
+  </div>
+
+  <nav class="post-nav">
+    <a href="{{ '/' | relative_url }}#products">← cd ~/#products</a>
+    <a href="https://pitrova.xodhiambo.com">pitrova.xodhiambo.com ↗</a>
+  </nav>
+</article>
