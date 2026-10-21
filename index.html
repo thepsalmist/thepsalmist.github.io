@@ -97,6 +97,105 @@ layout: default
   </div>
 </section>
 
+<section id="products">
+  <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">systemctl status pitrova matchdesk jobtracker</span></div>
+
+  <article class="svc">
+    <div class="svc-head">
+      <span class="status running">●</span><h3>Pitrova</h3>
+      <span class="lvl live">LIVE</span>
+      <span class="unit">pitrova.service</span>
+    </div>
+    <div class="sysd">
+      <span class="k">Loaded:</span><span>dokku · <a href="https://pitrova.xodhiambo.com">pitrova.xodhiambo.com</a></span>
+      <span class="k">Active:</span><span><span class="ok">active (running)</span></span>
+      <span class="k">Procs:</span><span>web (Next.js 16, PWA) · api (FastAPI) · worker (Procrastinate)</span>
+    </div>
+    <div class="svc-body">
+      <div>
+        <p>Know what your car costs you. Kenyan owners log fuel and services in under a minute and see monthly spend, cost per km, and the bills coming next.</p>
+        <ul>
+          <li>Background jobs on Procrastinate in Postgres, inside a hard connection budget shared by API and worker pools</li>
+          <li>Receipts and nightly database backups on Cloudflare R2, separate buckets and keys</li>
+          <li>OpenTelemetry pushed over OTLP to Alloy, with log redaction applied to span attributes</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <div class="bar"><i></i><i></i><i></i><span>pitrova.xodhiambo.com</span></div>
+        <img src="{{ '/assets/images/projects/pitrova.webp' | relative_url }}" width="640" height="400" loading="lazy" alt="Pitrova landing page: Know what your car costs you, beside a phone showing a year of car costs">
+      </figure>
+    </div>
+    <div class="meta">stack: <b>Next.js · FastAPI · Postgres · Redis · Procrastinate · Cloudflare R2 · Dokku</b></div>
+    <div class="actions">
+      <a class="primary" href="https://pitrova.xodhiambo.com">open ↗</a>
+      <a href="{{ '/projects/pitrova/' | relative_url }}">how it's built →</a>
+    </div>
+  </article>
+
+  <article class="svc">
+    <div class="svc-head">
+      <span class="status running">●</span><h3>Matchdesk</h3>
+      <span class="lvl live">LIVE</span>
+      <span class="lvl white-label">WHITE-LABEL</span>
+      <span class="unit">matchdesk.service</span>
+    </div>
+    <div class="sysd">
+      <span class="k">Loaded:</span><span>dokku · <a href="https://matchdesk.xodhiambo.com">matchdesk.xodhiambo.com</a></span>
+      <span class="k">Active:</span><span><span class="ok">active (running)</span> · white-labelled as Make Your Move</span>
+      <span class="k">Procs:</span><span>web (gunicorn) · worker (Procrastinate)</span>
+    </div>
+    <div class="svc-body">
+      <div>
+        <p>Back office for a podcast's matchmaking segment. Listeners pay per intro with M-Pesa, the person featured reads the note and decides, and the host approves every profile.</p>
+        <ul>
+          <li>M-Pesa payments through Paystack, confirmed by signed webhooks</li>
+          <li>Scheduled jobs lapse unanswered intros after 7 days and hand the credit back</li>
+          <li>Tenancy per host, magic-link sign in, OpenTelemetry across Django, psycopg and httpx</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <div class="bar"><i></i><i></i><i></i><span>matchdesk.xodhiambo.com</span></div>
+        <img src="{{ '/assets/images/projects/matchdesk.webp' | relative_url }}" width="640" height="400" loading="lazy" alt="Matchdesk landing page, branded Make Your Move by The Porch Podcast">
+      </figure>
+    </div>
+    <div class="meta">stack: <b>Django · HTMX · Postgres · Procrastinate · Paystack · Dokku</b></div>
+    <div class="actions">
+      <a class="primary" href="https://matchdesk.xodhiambo.com">open ↗</a>
+    </div>
+  </article>
+
+  <article class="svc building">
+    <div class="svc-head">
+      <span class="status activating">◐</span><h3>JobTracker</h3>
+      <span class="lvl building">BUILDING</span>
+      <span class="unit">jobtracker.service</span>
+    </div>
+    <div class="sysd">
+      <span class="k">Loaded:</span><span>dokku · <a href="https://jobtracker.xodhiambo.com">jobtracker.xodhiambo.com</a></span>
+      <span class="k">Active:</span><span><span class="warn">activating</span> · phase 1.6, email ingestion · every merge to main ships</span>
+      <span class="k">Procs:</span><span>web (uvicorn) · worker (Procrastinate)</span>
+    </div>
+    <div class="svc-body">
+      <div>
+        <p>A calmer job search. Paste a posting link and the details fill in while you sign up, then reminders bring saved roles back before they close.</p>
+        <ul>
+          <li>Application history is an append-only event log; the current stage is a derived cache</li>
+          <li>Postings are read in a background job, so signup never waits on a slow site</li>
+          <li>Redis-backed sessions with Argon2id, and a separately secured operations admin</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <div class="bar"><i></i><i></i><i></i><span>jobtracker.xodhiambo.com</span></div>
+        <img src="{{ '/assets/images/projects/jobtracker.webp' | relative_url }}" width="640" height="400" loading="lazy" alt="JobTracker landing page: Less keeping tabs. More moving forward.">
+      </figure>
+    </div>
+    <div class="meta">stack: <b>FastAPI · HTMX · Alpine.js · Postgres · Redis · Procrastinate · Dokku</b></div>
+    <div class="actions">
+      <a href="https://jobtracker.xodhiambo.com">preview ↗</a>
+    </div>
+  </article>
+</section>
+
 <section id="work">
   <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">systemctl list-units --type=work --sort=impact</span></div>
 
