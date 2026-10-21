@@ -109,8 +109,7 @@ a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .logline{padding:9px 0;font-size:13.5px;display:flex;gap:14px;flex-wrap:wrap;align-items:baseline}
 .logline .ts{color:var(--dim);font-size:12px;min-width:120px}
 .logline .tag-ok{color:var(--ok);font-size:12px}
-.logline .tag-todo{color:var(--dim);font-size:12px}
-.logline .title{color:var(--text)}
+.logline .tag-todo{color:var(--dim);font-size:12px}.logline .title{color:var(--text)}
 .logline a.title{color:var(--amber)}
 
 footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--dim)}
@@ -120,6 +119,7 @@ footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);disp
 .post-header h1{font-size:clamp(24px,4.5vw,36px);font-weight:700;color:#E9EDF2;line-height:1.2;letter-spacing:-.01em;max-width:680px}
 .post-header .postmeta{margin-top:14px;font-size:12px;color:var(--dim)}
 .post-header .postmeta .tag-ok{color:var(--ok)}
+.post-header .postmeta .tag-wip{color:var(--amber)}
 
 .post-body{font-family:'Public Sans',system-ui,sans-serif;font-size:16.5px;line-height:1.75;max-width:680px;padding:40px 0 24px}
 .post-body p{margin-bottom:18px}
@@ -157,6 +157,11 @@ footer{margin-top:64px;padding:24px 0 40px;border-top:1px solid var(--line);disp
 .post-body pre .d{color:var(--dim)}
 .post-body pre.diagram code{line-height:1.5}
 .post-body .log{font-family:'JetBrains Mono',monospace;margin-bottom:18px}
+.post-body .logline{flex-wrap:nowrap}
+.post-body .logline > span:first-child{flex:none;min-width:72px}
+.post-body .logline .title{flex:1;min-width:0}
+.post-body .table-scroll{overflow-x:auto;margin-bottom:18px}
+.post-body .table-scroll table{margin-bottom:0}
 
 /* Post footer nav */
 .post-nav{border-top:1px solid var(--line);padding:24px 0;font-size:13px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}

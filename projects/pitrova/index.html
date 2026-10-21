@@ -24,7 +24,7 @@ description: >-
     <p>Kenyan car owners log a fill-up or a service in under a minute. Pitrova adds it up: monthly spend, cost per kilometre, fuel economy from full tank to full tank, and the services and bills coming next.</p>
 
     <h2>Shape</h2>
-    <p>A modular monolith in three processes. The browser only talks to the web app, which forwards <code>/api/v1</code> to the API, so the browser sees a single origin.</p>
+    <p>A modular monolith in three processes. The browser only talks to the web app, which forwards <code>/api/v1</code> to the API, so the browser sees a single origin and session cookies stay host-only.</p>
 <pre class="diagram"><code><span class="d">browser</span> -> Cloudflare -> Dokku nginx -> <span class="p">web</span>  Next.js 16 · PWA
                                         |  <span class="d">/api/v1 forwarded</span>
                                         v
@@ -39,22 +39,46 @@ description: >-
 
 <span class="d">api, worker -- OpenTelemetry over OTLP/HTTP --> Alloy</span></code></pre>
 
+    <h2>Background jobs</h2>
+    <p>Procrastinate keeps the queue in the same Postgres as the data, and the API defers a job on its own session's connection. The job row and the domain row commit together or not at all, so there is no outbox and no window where one exists without the other.</p>
+    <ul>
+      <li><strong>Tasks take IDs, not objects,</strong> and load their row first. One that finds its work already finished exits early, so running a task twice does nothing new.</li>
+      <li><strong>A dead worker doesn't strand its jobs.</strong> A job every minute re-queues work whose worker has sent no heartbeat for 90 seconds.</li>
+      <li><strong>Procrastinate's tables stay out of Alembic.</strong> The release phase applies the job schema first, then the app's migrations, then the worker and API restart.</li>
+    </ul>
+
+    <h2>Connection budget</h2>
+    <p>Running out of Postgres connections fails the API and the worker at the same moment, so every pool is counted and the total has to fit under a hard ceiling:</p>
+<pre><code>  api processes × <span class="p">API_POOL_SIZE</span>
++ workers × (<span class="p">WORKER_CONCURRENCY</span> + 4 Procrastinate pool
+             + 1 LISTEN + 1 healthcheck + 1 queue-depth metric)
++ 2 for migrations
+<span class="s">&lt;= 0.8 × max_connections</span></code></pre>
+    <p>The SQLAlchemy pools have no overflow, so these are caps rather than targets, and the API never opens a Procrastinate pool of its own. The numbers live next to each other in the environment file, so changing one means seeing the others.</p>
+
+    <h2>Sessions and rate limits</h2>
+    <p>Sessions are hand-rolled rather than taken from an auth package. The browser holds an opaque ID in an <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code> cookie; the session itself lives in Redis with a sliding expiry, and a per-user set makes "sign out everywhere" one delete. Passwords use Argon2id, and unsafe methods need a double-submit CSRF token.</p>
+    <p>Rate limits are a sliding window in Redis, run as one Lua script so the check and the count can't race, and a refusal returns <code>429</code> with a <code>Retry-After</code> header. Redis is never the source of truth for anything in the domain: losing it signs people out and resets the limits, but loses no data.</p>
+
+    <h2>Observability</h2>
+    <p>Every line of log output is one JSON object carrying the trace ID, and request lines name the route template, never the raw path, because paths can carry tokens. A redaction pass masks emails, Kenyan phone numbers, number plates and VINs, and the same rules run over span attributes. Telemetry is pushed over OTLP to Alloy, so no port is exposed, and an inbound <code>traceparent</code> is ignored so a client can't choose its own trace ID.</p>
+    <p><code>/readyz</code> checks Postgres, Redis and object storage, each with a 2-second timeout. It reports worker freshness too, but a stale worker never fails readiness: a dead background process shouldn't pull a healthy API out of rotation.</p>
+
     <h2>Deploy</h2>
-    <p><code>git push dokku main</code>. The release phase creates the job schema and runs Alembic before the worker and API restart, so new code never meets an old schema.</p>
+    <p><code>git push dokku main</code>. The release phase creates the job schema and runs Alembic before the worker and API restart, so new code never meets an old schema. Database backups run nightly, encrypted, to their own R2 bucket.</p>
 <pre><code><span class="d"># apps/api/Procfile</span>
 <span class="p">web:</span>     uvicorn milemind.api.app:create_app --factory --no-proxy-headers …
 <span class="p">worker:</span>  python -m milemind.jobs.worker
 <span class="p">release:</span> python -m milemind.jobs.schema &amp;&amp; alembic upgrade head</code></pre>
 
     <h2>Decisions</h2>
-    <p>Twelve decision records so far. The ones that shaped how it runs:</p>
     <div class="log">
-      <div class="logline"><span class="ts">ADR 0001</span><span class="title">Modular monolith, three processes</span></div>
-      <div class="logline"><span class="ts">ADR 0004</span><span class="title">AI output requires explicit user confirmation</span></div>
-      <div class="logline"><span class="ts">ADR 0005</span><span class="title">Procrastinate on PostgreSQL for background jobs</span></div>
-      <div class="logline"><span class="ts">ADR 0006</span><span class="title">Redis responsibilities and key conventions</span></div>
-      <div class="logline"><span class="ts">ADR 0009</span><span class="title">The web app forwards /api to the API</span></div>
-      <div class="logline"><span class="ts">ADR 0012</span><span class="title">Dokku on one server, storage and backups on Cloudflare R2</span></div>
+      <div class="logline"><span class="ts">shape</span><span class="title">Modular monolith, three processes</span></div>
+      <div class="logline"><span class="ts">web</span><span class="title">PWA first; a native app waits until the product is validated</span></div>
+      <div class="logline"><span class="ts">web</span><span class="title">The web app forwards /api to the API</span></div>
+      <div class="logline"><span class="ts">jobs</span><span class="title">Procrastinate on PostgreSQL for background jobs</span></div>
+      <div class="logline"><span class="ts">redis</span><span class="title">Redis owns sessions, cache, rate limits and short locks, and nothing else</span></div>
+      <div class="logline"><span class="ts">hosting</span><span class="title">Dokku on one server, storage and backups on Cloudflare R2</span></div>
     </div>
   </div>
 

@@ -1,0 +1,70 @@
+---
+layout: default
+title: "JobTracker: save the link now, the details catch up"
+description: >-
+  How JobTracker is built: FastAPI, HTMX, Postgres, Redis and Procrastinate on
+  Dokku, with capture that never waits on the job posting.
+---
+<article>
+  <header class="post-header">
+    <div class="prompt" style="margin-top:0;margin-bottom:20px">
+      <span class="user">xavier@nairobi:~$</span>
+      <span class="cmd">cat projects/jobtracker/README.md</span>
+    </div>
+    <h1>{{ page.title }}</h1>
+    <div class="postmeta">
+      <span class="tag-wip">[BUILDING]</span>
+      <a href="https://jobtracker.xodhiambo.com">jobtracker.xodhiambo.com ↗</a>
+      · FastAPI · HTMX · Alpine.js · Postgres · Redis · Procrastinate · Dokku
+    </div>
+  </header>
+
+  <div class="post-body">
+    <h2 style="margin-top:0">What it is</h2>
+    <p>A job application tracker for people who currently use a spreadsheet. Paste a posting link and it's saved; the title, organisation and posting text fill in while you carry on. Two rules decide what gets built: capture has to be near-instant, and the app has to show something a spreadsheet can't.</p>
+
+    <h2>Shape</h2>
+    <p>Server-rendered FastAPI with HTMX: handlers return HTML fragments, and the business logic sits in a service layer so a JSON API for a native app can be a thin adapter later. Capture is never blocked on parsing. The link is saved first and fetched in the background; a failed fetch means typing the title yourself, never a lost save.</p>
+<pre class="diagram"><code><span class="d">browser</span> -> Dokku nginx -> <span class="p">web</span>     FastAPI · Jinja · HTMX · Alpine.js
+                          |  <span class="d">sessions, rate limits --></span> <span class="s">Redis 7</span>
+                          |  <span class="d">save the link first, then defer the fetch</span>
+                          v
+                      <span class="s">Postgres 16</span>   <span class="d">applications · append-only events · jobs</span>
+                          ^
+                          |  <span class="d">fill blank fields, append an event</span>
+                       <span class="p">worker</span>  Procrastinate
+                          |
+                          v
+                      <span class="p">outbound boundary</span>   <span class="d">resolve, check, pin, cap</span>
+                          |
+                          v
+                      <span class="s">the posting</span>   <span class="d">whatever URL a person pasted</span></code></pre>
+
+    <h2>Fetching the posting safely</h2>
+    <p>The posting URL is typed by a user, so it is attacker-supplied, and the fetch is the first code in the app that opens a connection to an address someone else picked. The boundary refuses by default and checks again on every redirect: <code>http</code> or <code>https</code> only, no credentials in the URL, web ports only, every resolved address public, a capped number of redirects, capped bytes, and an HTML content type.</p>
+    <p>Checking the address isn't enough on its own. If the hostname is handed to the HTTP client afterwards, it resolves the name again, and a DNS server the attacker controls can answer with a public address for the check and <code>127.0.0.1</code> a millisecond later. That's DNS rebinding. So the request goes to the literal address that passed the check, with the hostname carried only for TLS and the <code>Host</code> header.</p>
+    <p>Most of httpx's conveniences are switched off for the same reason: each one makes a decision this boundary exists to make itself.</p>
+    <table>
+      <thead><tr><th>httpx default</th><th>Instead</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>follow redirects</td><td>its own redirect loop</td><td>every hop is re-validated, not just the first</td></tr>
+        <tr><td>pool connections</td><td>no keep-alive</td><td>the pool is keyed by the pinned IP, so a second hostname on it would skip certificate checks</td></tr>
+        <tr><td>decompress for us</td><td>raw bytes through a capped <code>zlib</code> decoder</td><td>httpx decodes a whole read before any cap of ours runs</td></tr>
+        <tr><td>buffer the response</td><td>stream in chunks against two caps</td><td>a body we'll refuse is never held whole</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Why the queue moved to Procrastinate</h2>
+    <p>The first queue was arq, because Redis was already there for sessions and rate limits. It gave no visibility: what's queued, and why a job failed, meant reading Redis keys, and a failed job's arguments were gone. Procrastinate keeps jobs as rows in the Postgres the app already runs, so monitoring is one query, the same in dev, tests and production:</p>
+<pre><code>select id, task_name, status, attempts, queueing_lock from procrastinate_jobs;</code></pre>
+    <p>The cost, measured: a defer takes 2.08 ms against arq's 0.22 ms, inside a save request that runs 6.8 ms median and 17.2 ms p95. It also doesn't buy transactional enqueue. Procrastinate speaks psycopg and the app's SQLAlchemy speaks asyncpg, so the job and the application can't commit on one connection. The save still commits first and defers after. The move was for visibility, not transactions.</p>
+
+    <h2>Status is derived, never stored as truth</h2>
+    <p>Every stage change is a row in an append-only <code>application_events</code> table, and <code>current_stage</code> is only a cache of the latest one, so history, undo and where a change came from are free. A shortlisted job is just an application that hasn't been applied to yet, so "I applied" is a stage change, not a move between tables.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a href="{{ '/' | relative_url }}#products">← cd ~/#products</a>
+    <a href="https://jobtracker.xodhiambo.com">jobtracker.xodhiambo.com ↗</a>
+  </nav>
+</article>
