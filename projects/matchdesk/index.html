@@ -1,0 +1,93 @@
+---
+layout: default
+title: "Matchdesk: a podcast's matchmaking desk, paid by M-Pesa"
+description: >-
+  How Matchdesk is built and run: Django, HTMX, Postgres and Procrastinate on
+  Dokku, with M-Pesa payments through Paystack and OpenTelemetry end to end.
+---
+<article>
+  <header class="post-header">
+    <div class="prompt" style="margin-top:0;margin-bottom:20px">
+      <span class="user">xavier@nairobi:~$</span>
+      <span class="cmd">cat projects/matchdesk/README.md</span>
+    </div>
+    <h1>{{ page.title }}</h1>
+    <div class="postmeta">
+      <span class="tag-ok">[LIVE]</span>
+      <a href="https://matchdesk.xodhiambo.com">matchdesk.xodhiambo.com ↗</a>
+      · Django · HTMX · Postgres · Procrastinate · Paystack · Dokku
+    </div>
+  </header>
+
+  <div class="post-body">
+    <h2 style="margin-top:0">What it is</h2>
+    <p>A white-label back office for a podcast's matchmaking segment, live as Make Your Move for The Porch Podcast. Listeners pay a small fee per intro with M-Pesa, the person featured reads the note and decides, and the host approves every profile before it goes up. Nobody's contact is shared until both people say yes.</p>
+
+    <h2>Shape</h2>
+    <p>One Django app in two processes. Webhooks are handled in the web request, so payments still land when the worker is down or backed up; only the emails wait for the worker.</p>
+<pre class="diagram"><code><span class="d">browser</span> -> Dokku nginx, TLS ------------> <span class="p">web</span>     Django · gunicorn · HTMX
+<span class="s">Paystack</span> -- charge.success webhook -----> |
+                                          |  <span class="d">check signature, store event first</span>
+                                          |  <span class="d">emails deferred in the same commit</span>
+                                          v
+                                      <span class="s">Postgres 16</span>   <span class="d">data · cache · job queue</span>
+                                          ^
+                                          |
+<span class="s">Paystack</span> &lt;-- verify, every minute ---- <span class="p">worker</span>  Procrastinate
+                                          |
+                                          v
+                                      <span class="s">ZeptoMail</span>     <span class="d">magic links · receipts</span>
+
+<span class="d">web, worker -- OTLP --> Alloy --> Tempo, Prometheus</span>
+<span class="d">JSON logs on stdout --> Loki</span></code></pre>
+
+    <h2>Payments</h2>
+    <p>The Finder taps pay, Paystack sends an M-Pesa prompt to their phone, and they enter their PIN. Paystack only sends a webhook when a charge succeeds. There is no failure event, so a declined or abandoned payment is only ever found by asking. Two paths report an outcome, and both feed one function:</p>
+    <ul>
+      <li><strong>The webhook</strong>, seconds after the PIN. The body is signed with HMAC-SHA512 and compared with <code>hmac.compare_digest</code>. A bad signature gets a 401 and is never stored.</li>
+      <li><strong>A reconcile job every minute</strong> that verifies anything still pending, which catches a lost webhook or a closed tab.</li>
+    </ul>
+    <p>The function locks the payment row with <code>select_for_update</code> and does nothing if the payment is already final, so the webhook and the reconcile job agreeing on the same success is a no-op the second time. The rest follows from not losing money:</p>
+    <ul>
+      <li>The payment reference is generated before Paystack is called, so a crash mid-charge leaves a row to trace, not a ghost payment.</li>
+      <li>"Paystack said no" and "we don't know" are different errors. A timeout may still end in a paid prompt, so it leaves the payment pending for verify to settle instead of marking it failed.</li>
+      <li>The raw webhook event is saved in its own commit before processing, so it can always be read back and replayed.</li>
+      <li>An amount or currency that doesn't match what was charged goes to <code>review</code> for a person, never to <code>paid</code>.</li>
+      <li>Amounts are whole shillings in the database and Paystack's smallest unit only at the boundary, so money never meets floating point.</li>
+    </ul>
+
+    <h2>Deploy</h2>
+    <p>Every push to <code>main</code> runs CI (ruff, a missing-migration check, pytest against Postgres 16, an image build), then pushes the image to GHCR and tells Dokku to pull it. Deploys share one concurrency group, and CD skips the deploy if <code>main</code> has moved past the commit, so re-running an old build never replaces a newer release. Rolling back is <code>git:from-image</code> with an earlier SHA.</p>
+<pre><code><span class="d"># Procfile</span>
+<span class="p">web:</span>     gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3 --timeout 30 …
+<span class="p">worker:</span>  python manage.py procrastinate worker
+<span class="p">release:</span> python manage.py migrate --noinput &amp;&amp; python manage.py createcachetable</code></pre>
+    <p>The worker needs a direct Postgres connection for LISTEN/NOTIFY, so nothing like pgbouncer in transaction mode can sit in front of it. <code>make dokku-setup</code> provisions the app from a laptop over SSH: it reads each setting first, changes only what differs, never deletes, and never prints a secret.</p>
+
+    <h2>Observability</h2>
+    <p>Every process writes one JSON object per line, carrying the trace ID, and every response returns it as <code>X-Request-ID</code>, so a support question goes straight from a response to its trace in Tempo. Phone numbers and emails are masked; Paystack keys, signatures and magic-link tokens become <code>&lt;redacted&gt;</code>, in logs and span attributes alike. Telemetry is pushed over OTLP, so there is no <code>/metrics</code> port to expose.</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Metric</th><th>Labels</th></tr></thead>
+      <tbody>
+        <tr><td><code>matchdesk_payments_total</code></td><td>paid · failed · review</td></tr>
+        <tr><td><code>matchdesk_webhook_events_total</code></td><td>signature valid · invalid</td></tr>
+        <tr><td><code>matchdesk_queue_depth</code></td><td>queue, todo · doing</td></tr>
+        <tr><td><code>matchdesk_jobs_total</code></td><td>task, succeeded · failed</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2>Decisions</h2>
+    <div class="log">
+      <div class="logline"><span class="ts">payments</span><span class="title">Paystack over Safaricom Daraja: one integration for every host, and the platform's cut split at source</span></div>
+      <div class="logline"><span class="ts">payments</span><span class="title">Webhooks processed in the request, not on the worker</span></div>
+      <div class="logline"><span class="ts">payments</span><span class="title">No refunds: a declined or expired intro becomes a credit to spend again</span></div>
+      <div class="logline"><span class="ts">jobs</span><span class="title">Intros nobody answers lapse after 7 days and hand the credit back</span></div>
+      <div class="logline"><span class="ts">ops</span><span class="title">Rate-limit counters live in the database cache, created in the release phase</span></div>
+    </div>
+  </div>
+
+  <nav class="post-nav">
+    <a href="{{ '/' | relative_url }}#products">← cd ~/#products</a>
+    <a href="https://matchdesk.xodhiambo.com">matchdesk.xodhiambo.com ↗</a>
+  </nav>
+</article>
