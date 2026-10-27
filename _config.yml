@@ -6,6 +6,7 @@ description: >-
   years at Code for Africa building civic-tech data platforms.
 url: "https://xodhiambo.com"
 baseurl: ""
+timezone: Africa/Nairobi
 author:
   name: Xavier Odhiambo
   email: xavierfrank4@gmail.com
