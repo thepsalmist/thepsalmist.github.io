@@ -24,7 +24,15 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/assets/css/terminal.css' | relative_url }}">
 
-  {% seo title=false %}
+  {%- capture seo_tags -%}{% seo title=false %}{%- endcapture -%}
+  {%- if page.ogTitle -%}
+    {%- assign seo_title = page.title | escape_once -%}
+    {%- assign og_title = page.ogTitle | escape_once -%}
+    {%- capture seo_from %}title" content="{{ seo_title }}"{% endcapture -%}
+    {%- capture seo_to %}title" content="{{ og_title }}"{% endcapture -%}
+    {%- assign seo_tags = seo_tags | replace: seo_from, seo_to -%}
+  {%- endif %}
+  {{ seo_tags }}
 
   {% include analytics.html %}
 </head>
