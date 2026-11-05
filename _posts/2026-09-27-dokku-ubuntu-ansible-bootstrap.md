@@ -22,7 +22,7 @@ tags: [ansible, dokku, ubuntu, ssh, fail2ban, docker, infrastructure]
 
 `PasswordAuthentication no` is probably the most copied line of server hardening advice on the internet. On a lot of Ubuntu cloud images, it does nothing.
 
-I found that out while turning my new-server checklist into an Ansible playbook, [ansible-server-bootstrap](https://github.com/thepsalmist/ansible-server-bootstrap). It takes a fresh Ubuntu 22.04 or 24.04 VPS to a hardened [Dokku](https://dokku.com/) host with Heroku-style `git push` deploys, and it's built to be re-run. Automating the checklist meant checking it, and a few steps I had always trusted turned out not to do what I thought.
+I found that out while turning my new-server checklist into an Ansible playbook, [ansible-server-bootstrap](https://github.com/thepsalmist/ansible-server-bootstrap). It takes a fresh Ubuntu 22.04 or 24.04 VPS to a hardened [Dokku](https://dokku.com/) host, and it's built to be re-run. My apps use Dokku's [Docker Image Deployment](https://dokku.com/docs/deployment/methods/image/): `git:from-image` initializes or updates each app's repository from a Docker image. Automating the checklist meant checking it, and a few steps I had always trusted turned out not to do what I thought.
 
 > **TL;DR**
 > - A cloud-init drop-in can keep SSH password login enabled after you disable it in `sshd_config`. Write your settings to `sshd_config.d/00-hardening.conf` and confirm them with `sshd -T`.

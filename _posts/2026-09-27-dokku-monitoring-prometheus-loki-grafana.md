@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "How to Monitor Dokku Apps with Prometheus, Loki and Grafana (Ansible Setup)"
-ogTitle: "Two Dashboard Panels That Lied, and Other Notes on Monitoring a Dokku Host"
+ogTitle: "One Screen for the Server, One for Each App: Monitoring a Dokku Host"
 slug: dokku-monitoring-prometheus-loki-grafana
 permalink: /blog/dokku-monitoring-prometheus-loki-grafana/
 date: 2026-09-27 10:00:00 +0300
@@ -27,7 +27,7 @@ Dokku tells you an app deployed. It doesn't tell you the app has been returning 
 > - Six collectors run as a Compose project on a private Docker network. Grafana runs as a normal Dokku app, so it gets a domain and TLS like any other.
 > - On Ubuntu 24.04, a fail2ban jail with a `logpath` silently watches nothing unless you set `backend = auto`.
 > - Every per-app panel comes from things Dokku already has: nginx access logs, container labels and a `/healthz` route.
-> - Two panels lied: a "disk full in" projection, and cAdvisor container names stuck on Dokku's temporary `.upcoming` names.
+> - Two panels misled me: a "disk full in" projection, and cAdvisor container names stuck on Dokku's temporary `.upcoming` names.
 > - On a lightly used host, the monitoring stack uses more memory than the apps it watches.
 
 This is the Server dashboard the role provisions as Grafana's home page:
