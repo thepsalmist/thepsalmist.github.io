@@ -98,7 +98,39 @@ layout: default
 </section>
 
 <section id="products">
-  <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">systemctl status pitrova matchdesk jobtracker</span></div>
+  <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">systemctl status kandili pitrova matchdesk jobtracker</span></div>
+
+  <article class="svc">
+    <div class="svc-head">
+      <span class="status running">●</span><h3>Kandili</h3>
+      <span class="lvl live">LIVE</span>
+      <span class="unit">kandili.service</span>
+    </div>
+    <div class="sysd">
+      <span class="k">Loaded:</span><span>dokku · <a href="https://kandili.app">kandili.app</a></span>
+      <span class="k">Active:</span><span><span class="ok">active (running)</span></span>
+      <span class="k">Procs:</span><span>web (uvicorn) · worker (Procrastinate) · release (alembic)</span>
+    </div>
+    <div class="svc-body">
+      <div>
+        <p>Planned power-cut alerts for Kenya. Kandili reads the notices Kenya Power publishes each week, matches them to the estates people follow, and tells them on Telegram or by email, with a reminder that morning and a calendar feed.</p>
+        <ul>
+          <li>Two-column notice PDFs read column by column; a notice with a wrong weekday or no places is held for review, never sent</li>
+          <li>Each alert is claimed in Postgres before it goes out, so a retried job can't send it twice</li>
+          <li>Built as an image on GHCR and deployed with git:from-image; a migration that waits on a lock fails the deploy, not the site</li>
+        </ul>
+      </div>
+      <figure class="shot">
+        <div class="bar"><i></i><i></i><i></i><span>kandili.app</span></div>
+        <img src="{{ '/assets/images/projects/kandili.webp' | relative_url }}" width="640" height="400" loading="lazy" alt="Kandili landing page: Know before the lights go, beside a Telegram alert and morning reminder for a planned power cut">
+      </figure>
+    </div>
+    <div class="meta">stack: <b>FastAPI · Jinja · Postgres · Procrastinate · pdfplumber · Telegram · Resend · Dokku</b></div>
+    <div class="actions">
+      <a class="primary" href="https://kandili.app">open ↗</a>
+      <a href="{{ '/projects/kandili/' | relative_url }}">how it's built →</a>
+    </div>
+  </article>
 
   <article class="svc">
     <div class="svc-head">
