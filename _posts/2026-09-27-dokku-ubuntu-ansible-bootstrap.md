@@ -1,47 +1,59 @@
 ---
 layout: post
 title: "How to Set Up Dokku on Ubuntu 24.04 with Ansible (Hardened, Re-runnable Bootstrap)"
+ogTitle: "From Fresh VPS to Your Own Heroku: A Re-runnable Dokku Bootstrap"
 slug: dokku-ubuntu-ansible-bootstrap
 permalink: /blog/dokku-ubuntu-ansible-bootstrap/
 date: 2026-09-27 09:00:00 +0300
-description: "Turn a fresh Ubuntu 22.04/24.04 VPS into a hardened Dokku host with one re-runnable Ansible playbook, and the checklist steps that finished without errors but didn't do what I thought: SSH hardening, fail2ban, and installing Docker and Dokku from signed apt repositories."
+last_modified_at: 2026-11-05
+description: "Turn a fresh Ubuntu 22.04/24.04 VPS into a hardened Dokku host with one re-runnable Ansible playbook, and the hardening steps that reported success without taking effect."
+keywords:
+  - dokku ansible
+  - install dokku ubuntu 24.04
+  - dokku vps setup
+  - self-hosted heroku alternative
+  - ansible ubuntu server hardening
+  - passwordauthentication no not working
+  - fail2ban banned my ip ansible
+  - docker bypasses ufw
+  - dokku plugins pin version
 tags: [ansible, dokku, ubuntu, ssh, fail2ban, docker, infrastructure]
 ---
 
-Every new server for my side projects started the same way. Create a user, copy an SSH key, disable password login, enable ufw, install fail2ban, pipe Docker's and Dokku's install scripts into bash, add the plugins, turn on TLS. An afternoon of copy-pasted commands, and at the end, no way to tell whether this server matched the last one.
+`PasswordAuthentication no` is probably the most copied line of server hardening advice on the internet. On a lot of Ubuntu cloud images, it does nothing.
 
-So I turned the checklist into an Ansible playbook, [ansible-server-bootstrap](https://github.com/thepsalmist/ansible-server-bootstrap). It takes a fresh Ubuntu 22.04 or 24.04 VPS to a hardened Dokku host: your own Heroku-style `git push` deploys, on a server you control. It's also built to converge: a second run should report `changed=0` as long as the configuration hasn't changed and no new package updates have been published (the base role runs an apt upgrade).
+I found that out while turning my new-server checklist into an Ansible playbook, [ansible-server-bootstrap](https://github.com/thepsalmist/ansible-server-bootstrap). It takes a fresh Ubuntu 22.04 or 24.04 VPS to a hardened [Dokku](https://dokku.com/) host, and it's built to be re-run. My apps use Dokku's [Docker Image Deployment](https://dokku.com/docs/deployment/methods/image/): `git:from-image` initializes or updates each app's repository from a Docker image. Automating the checklist meant checking it, and a few steps I had always trusted turned out not to do what I thought.
 
-The harder part was that automating the checklist meant checking it. I had treated commands that finished without errors as evidence that the server was configured correctly. Was password authentication actually disabled? Could the new admin log in before I removed root access? Would installing fail2ban ban the machine running the playbook? And what would happen when I ran it all again?
+> **TL;DR**
+> - A cloud-init drop-in can keep SSH password login enabled after you disable it in `sshd_config`. Write your settings to `sshd_config.d/00-hardening.conf` and confirm them with `sshd -T`.
+> - Installing fail2ban before exempting your own address can ban the machine running the playbook, mid-run.
+> - Docker and Dokku come from their signed apt repositories, not `curl | sh`, and Dokku and its plugins are pinned to exact versions.
+> - Still not covered: ports published by Docker bypass ufw, and there are no backups yet.
 
-A couple of steps that had always "worked" turned out not to do what I thought. This post is about those, starting with the one I'd have bet on.
+## A cloud-init drop-in keeps password login on
 
-## sshd keeps the first value it reads
-
-Disabling password login is one line in `/etc/ssh/sshd_config`. On Ubuntu, that line can leave password login enabled, even after a reload that reports success. The reason is the first setting in the same file, which most people scroll past:
+Ubuntu's `/etc/ssh/sshd_config` starts with a line most people scroll past:
 
 ```
 Include /etc/ssh/sshd_config.d/*.conf
 ```
 
-Every drop-in in that directory is read before the rest of the main file, and for almost every setting, sshd keeps the **first** value it sees. On many VPS images, cloud-init has already written a drop-in that allows passwords:
+Those drop-ins are read before the rest of the main file, and for most settings [sshd uses the first value it obtains](https://man.openbsd.org/sshd_config). On many VPS images, cloud-init has already written a drop-in that allows passwords:
 
 ```
 sshd_config.d/50-cloud-init.conf   PasswordAuthentication yes   <- read first, wins
-sshd_config (line 66)              PasswordAuthentication no    <- ignored
+sshd_config                        PasswordAuthentication no    <- ignored
 ```
 
-So you edit the main file, `sshd -t` passes, the reload succeeds, and password login keeps working. Nothing tells you. The only way to see it is to ask sshd what it will actually do:
+`sshd -t` passes, the reload succeeds, and password login keeps working. The only way to see it is to ask sshd what it will actually do:
 
 ```bash
 sudo sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|permitrootlogin) '
 ```
 
-The fix is to leave the main file alone. The playbook writes its settings to `/etc/ssh/sshd_config.d/00-hardening.conf`. Drop-ins are read in name order, so `00-` beats cloud-init's `50-`, and it's a file you own rather than one cloud-init manages.
+So the playbook leaves the main file alone and writes `/etc/ssh/sshd_config.d/00-hardening.conf`. Drop-ins load in name order, so `00-` is read before cloud-init's `50-`.
 
-## Trust the config sshd reports, not the file you wrote
-
-Writing the right file still isn't proof. A `Match` block, a provider's own drop-in or a file named `00-aaa.conf` could override it. So the SSH role doesn't trust its own drop-in until sshd confirms it, and tries to remove it if a check fails:
+That still isn't proof. A `Match` block or a provider's own `00-aaa.conf` could override it, so the role checks the effective config before trusting its own file, and removes the file if a check fails:
 
 {% raw %}
 ```yaml
@@ -85,19 +97,23 @@ Writing the right file still isn't proof. A `Match` block, a provider's own drop
 ```
 {% endraw %}
 
-Every line of that is there because a simpler version would lie. `sshd -T -C user=root,host=localhost,addr=127.0.0.1` evaluates the config for that specific connection context, a root login from localhost, so `Match` blocks that apply to it are included; plain `sshd -T` skips `Match` blocks altogether. It doesn't check every possible connection, only the one it describes. The reload is a task rather than a handler, because a handler runs at the end of the play, after the check that's supposed to test it. And `reset_connection` followed by `wait_for_connection` proves a brand new login works, not just the connection Ansible already had open.
+Three details carry the weight:
 
-There's one more safety net before any of this runs. The first playbook, `bootstrap.yml`, logs in as root and creates the admin user, then hands over to `site.yml`, which opens a **new** connection as that admin. That's the "open a second terminal and check you can still log in before you disable root" step from every manual guide, except it can't be skipped. The admin has no password, so if that login works, it used a key.
+- `-C` evaluates the config for one connection, a root login from localhost, so `Match` blocks that apply to it are included. [Without `-C`, `sshd -T` doesn't apply `Match` rules](https://man.openbsd.org/sshd).
+- The reload is a task, not a handler, because handlers run at the end of the play, after the check that's meant to test them.
+- `reset_connection` followed by `wait_for_connection` proves a brand new login works, not just the connection Ansible already had open.
 
-The recovery is best-effort, and it's worth being precise about its limits. The rescue deletes the drop-in only if this run changed it, so it doesn't restore whatever an earlier version contained. And it needs a working connection: Ansible's `rescue` doesn't handle unreachable-host errors, and even when it does run, its tasks still have to reach the server. If a bad reload stopped sshd accepting logins altogether, nothing in the playbook can fix that. So I still keep a root session or the provider's console open on a first run. The checks catch the realistic mistakes; the console covers the rest.
+Before any of this runs, `bootstrap.yml` logs in as root, creates an admin user with no password, and hands over to `site.yml`, which connects as that admin. It's the "open a second terminal before you disable root" step, except it can't be skipped.
 
-## The firewall that banned its own operator
+The rollback is best-effort. It only deletes a drop-in this run changed, and it needs a working connection: [Ansible doesn't run `rescue` for unreachable hosts](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_blocks.html). On a first run I still keep the provider's console open.
 
-Every tutorial installs fail2ban and then configures it. On a fresh server, that order can ban the machine running the playbook, partway through the run.
+## Installing fail2ban banned the machine running the playbook
 
-apt starts fail2ban the moment it's installed, and fail2ban's first job is to scan the **existing** `auth.log`. A first run against a server that only accepts a root password leaves a few failed key attempts from your address before the password gets through. That's enough for a ban. fail2ban's `REJECT` rule also sits above ufw's rule that accepts established connections, so the ban doesn't just block new logins: it kills the session Ansible is in the middle of using. The run dies with a privilege escalation timeout that points nowhere near the firewall.
+Most tutorials install [fail2ban](https://github.com/fail2ban/fail2ban), then configure it. On a fresh server, that order can ban the machine running the playbook.
 
-The fix is about order. Write the ignore list before the package exists:
+apt starts fail2ban as soon as it's installed, and it starts reading the recent SSH log history straight away. A first run against a server that only accepts a root password leaves a few failed key attempts from your address, which is enough for a ban. Because fail2ban's `REJECT` rule sits above ufw's rule for established connections, the ban also kills the session Ansible is using. The run dies with a privilege-escalation timeout that points nowhere near the firewall.
+
+The fix is ordering: write the ignore list before the package exists.
 
 ```yaml
 - name: Find the address Ansible connects from
@@ -105,6 +121,11 @@ The fix is about order. Write the ignore list before the package exists:
   become: false
   changed_when: false
   register: firewall_ssh_connection
+
+- name: Create the fail2ban jail directory
+  ansible.builtin.file:
+    path: /etc/fail2ban/jail.d
+    state: directory
 
 - name: Exempt the deploy address from fail2ban
   ansible.builtin.template:
@@ -116,13 +137,13 @@ The fix is about order. Write the ignore list before the package exists:
     name: fail2ban
 ```
 
-`$SSH_CONNECTION` gives your address as the server sees it, which is the address fail2ban would ban, so it works behind NAT where your laptop's own idea of its IP would be wrong.
+`$SSH_CONNECTION` is your address as the server sees it, which is the address fail2ban would ban, so it's right even behind NAT. The same role reads the SSH port from `sshd -T` rather than the inventory, so ufw opens the port sshd actually listens on.
 
-The same role takes the SSH port from `sshd -T` instead of Ansible's inventory. If the port was changed years ago, or a NAT maps 2222 to 22, the firewall still opens the port sshd is actually listening on.
+SSH and the firewall were about proving that hardening actually took effect. The rest of the playbook had a different job: installing Docker and Dokku so that a second run leaves a working server alone.
 
-## No more `curl | sh`
+## Installing Docker and Dokku from signed apt repositories
 
-Docker and Dokku both document a one-line installer that downloads a script and runs it as root. I replaced both with packages from their signed apt repositories, with Dokku pinned to an exact version (the Docker packages are installed by name, unpinned):
+[Docker](https://docs.docker.com/engine/install/ubuntu/) and [Dokku](https://dokku.com/docs/getting-started/installation/) both document a one-line installer that runs a downloaded script as root. The playbook installs both from their signed apt repositories instead, with Dokku pinned to an exact version:
 
 {% raw %}
 ```yaml
@@ -140,17 +161,17 @@ Docker and Dokku both document a one-line installer that downloads a script and 
 ```
 {% endraw %}
 
-A second run is then a no-op instead of a reinstall, and upgrading Dokku is a one-line version bump. Packages still contain executables and can run maintainer scripts as root when they install, so this isn't "nothing downloaded runs". The gain is that everything arrives through apt from repositories whose signatures are checked, instead of a script piped straight from the network into a root shell. Docker goes first, so Dokku's package depends on `docker-ce` rather than pulling in Ubuntu's older `docker.io`. A debconf answer (`dokku/skip_key_file`) stops the package importing root's SSH key, because the playbook registers the admin's keys itself.
+The package is also held, so the base role's apt upgrade can't move it. A second run is a no-op, and upgrading Dokku is a one-line version bump. Packages can still run maintainer scripts as root, so this isn't "nothing downloaded runs". The gain is that everything arrives through apt with its signatures checked. Docker installs first, so apt satisfies Dokku's Docker dependency with `docker-ce` rather than pulling in Ubuntu's older `docker.io`.
 
-Replacing the scripts exposed one thing they had been doing quietly. Dokku's installer writes `live-restore` into `/etc/docker/daemon.json`. The obvious way to add container log rotation is to template that whole file, which would silently delete Dokku's setting. The playbook reads the file, merges in only the log options and compares the **parsed** JSON. Comparing text doesn't work, because Dokku writes the file unsorted, and every run would "change" it and restart Docker.
+Replacing the scripts exposed one thing Dokku does quietly: it writes `live-restore` into `/etc/docker/daemon.json`. Templating that file to add log rotation would delete the setting, so the playbook merges in only the log options and compares the parsed JSON. A text comparison would never match, because Dokku writes the file unsorted, and Docker would restart on every run.
 
-## Teaching an imperative CLI to be idempotent
+## Making Dokku's CLI safe to re-run
 
-Dokku's CLI does things; it doesn't declare state. Wrapping it in Ansible means the same pattern everywhere: read what's there, act only on the difference. Three commands needed more than that.
+Dokku's CLI does things; it doesn't declare state. So every task reads what's there and acts only on the difference. Three commands needed more than that:
 
-**SSH keys.** `dokku ssh-keys:add` fails if the name already exists, so names based on list position break the day someone reorders the list. Each key is named after the admin user and a hash of its own key material, `<admin_user>-<first 8 of sha1>`, and keys Dokku already has are skipped.
-
-**Plugins.** `dokku plugin:install <url>` with no tag clones whatever the default branch holds that day. Two servers built a week apart could run different Postgres plugin code. Each plugin is pinned to a release tag, and the playbook compares that tag with what `dokku plugin:list --format json` reports:
+- **SSH keys.** `ssh-keys:add` fails if the name already exists, so each key is named after a hash of its own material (`<admin_user>-<first 8 of sha1>`), not its position in a list.
+- **Plugins.** `plugin:install <url>` with no tag clones whatever the default branch holds that day. Each plugin is pinned to a release tag and compared with `dokku plugin:list --format json`.
+- **Let's Encrypt.** [The plugin](https://github.com/dokku/dokku-letsencrypt) won't issue certificates until a global email is set. Querying just that value exits non-zero when it's empty, so the playbook reads the full `letsencrypt:report --global --format json` instead.
 
 ```yaml
 dokku_plugins:
@@ -165,15 +186,13 @@ dokku_plugins:
     version: "0.25.2"
 ```
 
-This only works because Dokku's own plugins keep the version in `plugin.toml` equal to the release tag. Pin a branch name instead and it never matches, so the plugin "updates" on every single run.
-
-**Let's Encrypt.** The plugin quietly refuses every certificate until a global email is set, which is easy to miss when that's a manual step in a README. Automating it hit one more quirk: asking for just that one value with `letsencrypt:report` exits non-zero when it's empty, so the playbook reads the full `--global --format json` report instead.
+Pinning works because Dokku's official plugins keep the version in `plugin.toml` equal to the release tag. Pin a branch name instead and it never matches, so the plugin reinstalls on every run.
 
 ## What it doesn't protect you from
 
-**Docker bypasses ufw.** Ports published with `docker run -p` or a Compose `ports:` entry go through Docker's own iptables rules. They're reachable from the internet even though `ufw status` doesn't list them. Dokku apps are fine, because nginx on 80 and 443 proxies to internal addresses. A database you expose "just for a minute" is not. Bind it to `127.0.0.1` and use an SSH tunnel.
+**Docker bypasses ufw.** Ports published with `docker run -p` or a Compose `ports:` entry [go through Docker's own firewall rules](https://docs.docker.com/engine/network/packet-filtering-firewalls/), so they're reachable from the internet even though `ufw status` doesn't list them. Dokku apps are fine, because nginx on 80 and 443 proxies to internal addresses. A database exposed "just for a minute" isn't: bind it to `127.0.0.1` and use an SSH tunnel.
 
-**Backups.** There are none. Off-server backups with a tested restore are the next thing I'd add before putting data I can't lose on this host.
+**Backups.** There are none yet. Off-server backups with a tested restore come before I put data I can't lose on this host.
 
 ## Running it yourself
 
@@ -187,5 +206,7 @@ cp group_vars/all.yml.example group_vars/all.yml    # admin_user, admin_ssh_keys
 ansible-playbook bootstrap.yml    # first run, as root (keep a console open)
 ansible-playbook site.yml         # every run after that
 ```
+
+If there's one habit to take from this: a command that exits 0 hasn't proved anything. Have the playbook check the state the command was meant to change, the way `sshd -T` checks what sshd will actually do.
 
 The same playbook also runs Prometheus, Loki and Grafana on the host, and building dashboards for a server that deploys by renaming containers had its own surprises. That's the [next post](/blog/dokku-monitoring-prometheus-loki-grafana/).
