@@ -1,0 +1,69 @@
+---
+layout: default
+title: "Kandili: know about a planned power cut before the lights go"
+description: >-
+  How Kandili is built: FastAPI, Postgres and Procrastinate on Dokku, reading
+  Kenya Power's planned-outage PDFs and sending each alert at most once.
+---
+<article>
+  <header class="post-header">
+    <div class="prompt" style="margin-top:0;margin-bottom:20px">
+      <span class="user">xavier@nairobi:~$</span>
+      <span class="cmd">cat projects/kandili/README.md</span>
+    </div>
+    <h1>{{ page.title }}</h1>
+    <div class="postmeta">
+      <span class="tag-ok">[LIVE]</span>
+      <a href="https://kandili.app">kandili.app ↗</a>
+      · FastAPI · Jinja · Postgres · Procrastinate · pdfplumber · Telegram · Resend · Dokku
+    </div>
+  </header>
+
+  <div class="post-body">
+    <h2 style="margin-top:0">What it is</h2>
+    <p>Kenya Power announces planned power cuts days ahead, in PDF notices on its website, and most people still find out when the fridge goes quiet. Kandili reads those notices, matches the places they list to the estates people follow, and sends an alert on Telegram or by email when a cut is announced, a reminder at 06:30 on the day, and a busy block in their calendar. It's free, and independent of Kenya Power: every alert links the notice it came from.</p>
+
+    <h2>Shape</h2>
+    <p>One FastAPI app serves the landing and outage pages, the Telegram webhook, the calendar feeds and the admin. A Procrastinate worker, with its queue in the same Postgres, does everything on a clock: the hourly poll of Kenya Power's notices page from 06:00 to 22:00, parsing, a sweep that sends pending alerts every minute, and the morning reminders.</p>
+<pre class="diagram"><code><span class="s">kplc.co.ke</span>   <span class="d">notices page, robots.txt respected, each PDF fetched once</span>
+     |
+     v
+  <span class="p">worker</span>  Procrastinate   <span class="d">PDF text -> parse -> validate</span>
+     |                    \
+     | <span class="d">valid</span>               <span class="d">doubtful --></span> <span class="p">admin review</span>
+     v
+ <span class="s">Postgres 16</span>   <span class="d">notices · outages · places · subscriptions · alerts · jobs</span>
+     |
+     | <span class="d">match outages to followed places, sweep pending alerts</span>
+     v
+  <span class="p">channels</span>   Telegram · email (Resend) · ICS calendar feeds</code></pre>
+
+    <h2>Reading a notice without guessing</h2>
+    <p>A weekly notice is an A3 page laid out in two columns. Plain text extraction reads straight across the page and interleaves them, which attaches places to the wrong area without failing any check. So each page is read as two columns when no word crosses the middle, read whole when words cross but no <code>AREA</code> or <code>DATE</code> line starts in the right half, and refused as a changed layout otherwise. Region and county headings carry over from one column and page to the next.</p>
+    <p>The notices are typed by hand, and it shows: <code>AREA;</code>, <code>AREAS:</code>, four ways to punctuate a time, and a place list that starts with "Area," and isn't a header. The parser accepts the variants it has seen. What it won't do is publish anything doubtful. An outage is held for review if its date doesn't exist, its weekday doesn't match its date, it starts after it ends, or it has no area or no places.</p>
+    <p>Across the eight notices on the site in October 2026, 346 outages were parsed and five were held. All five were mistakes in the notices themselves: two had the wrong weekday ("Wednesday 11.10.2026" is a Sunday), two had a date with no area, and one had an area with no readable date. Held outages go to a review queue in the admin, with the raw text and a link to the PDF, and the admin gets a Telegram message for each notice that needs a look.</p>
+
+    <h2>Sending each alert at most once</h2>
+    <p>A duplicate alert is worse than a missed one, so a send is claimed before anything reaches Telegram: one <code>UPDATE … WHERE status = 'pending'</code>, committed first. A retried or duplicated job finds nothing to claim.</p>
+    <table>
+      <thead><tr><th>What came back</th><th>Then</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>connection failed, 429, token rejected</td><td>retry with backoff, or after Telegram's <code>retry_after</code></td><td>Telegram certainly didn't get the message</td></tr>
+        <tr><td>read timeout, 5xx</td><td><code>failed</code>, "may have been delivered"</td><td>the message may already be on the phone</td></tr>
+        <tr><td>bot blocked, chat deleted</td><td><code>failed</code>, channel switched off</td><td>the person's next message switches it back on</td></tr>
+      </tbody>
+    </table>
+    <p>Nothing goes out between 22:00 and 06:00. The sweep queues nothing then, and the send checks the clock again, because a retry can come due at night. Alerts held overnight go out with the first sweep after 06:00.</p>
+
+    <h2>Calendar feeds that update in place</h2>
+    <p>Each person gets a private ICS feed, keyed by a 256-bit token, and every place has a public one. An event's UID comes from the outage and the place, so when Kenya Power revises a notice, calendars replace the event instead of adding a second. The feed asks for hourly refreshes. Apple Calendar honours that; Google Calendar refreshes every 12 to 24 hours whatever the feed says, so a notice posted late can miss the calendar but not the Telegram alert.</p>
+
+    <h2>Deploys that can't take the site down</h2>
+    <p>Every merge to <code>main</code> runs CI, builds the image, pushes it to GHCR tagged with the commit, and deploys it with Dokku's <code>git:from-image</code>. Migrations run in the <code>release</code> phase while the old containers are still serving, and each one waits at most five seconds for a table lock. A migration that would queue behind live traffic fails the deploy instead, and the old containers keep serving.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a href="{{ '/' | relative_url }}#products">← cd ~/#products</a>
+    <a href="https://kandili.app">kandili.app ↗</a>
+  </nav>
+</article>
