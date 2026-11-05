@@ -1,53 +1,64 @@
 ---
 layout: post
 title: "How to Add OpenTelemetry Tracing to Dokku Apps with Grafana Tempo and Alloy"
+ogTitle: "Four Workers, One Counter: Pushing Dokku App Telemetry with OpenTelemetry"
 slug: dokku-opentelemetry-tempo-tracing
 permalink: /blog/dokku-opentelemetry-tempo-tracing/
 date: 2026-10-06
+last_modified_at: 2026-11-05
 image: /assets/images/blog/dokku-opentelemetry-tempo-tracing/trace-archive-listings.png
-description: "Send OpenTelemetry traces and metrics from Dokku apps to Grafana Tempo and Prometheus through Alloy, with no new ports exposed, consistent app labels across metrics and logs, and one-click links between logs and traces. Deployed with Ansible."
+description: "Send OpenTelemetry traces and metrics from Dokku apps to Grafana Tempo and Prometheus through Alloy, with no new ports exposed, consistent app labels across metrics and logs, and links between logs and traces. Deployed with Ansible."
+keywords:
+  - dokku opentelemetry
+  - opentelemetry tracing grafana tempo
+  - grafana alloy otlp receiver
+  - prometheus otlp receiver
+  - prometheus metrics multiple workers python
+  - otel service.instance.id
+  - loki trace_id link to tempo
 tags: [dokku, opentelemetry, tempo, prometheus, grafana, observability, ansible]
 ---
 
 Ask a Python app running four worker processes how many requests it has served, and the answer depends on which worker you happen to ask.
 
-That's what a plain scrape does to it. Prometheus requests `/metrics`, the app server hands the request to whichever worker picks it up, and that worker reports its own counters, not the app's. Prometheus sees a counter that jumps up and down, and reads every drop as a restart.
+That's what a plain Prometheus scrape does. The app server hands the `/metrics` request to whichever worker picks it up, and that worker reports its own counters, not the app's. Prometheus sees a counter jumping up and down and reads every drop as a restart. It was the gap in my [Dokku monitoring](/blog/dokku-monitoring-prometheus-loki-grafana/), along with a bigger one: the dashboards could tell me an app was slow, but not why.
 
-That was the gap left in my Dokku monitoring. The [previous post](/blog/dokku-monitoring-prometheus-loki-grafana/) covered what the server can see from the outside: host metrics, container CPU and memory, nginx access logs, health checks. It could tell me an app was slow, but not which database query or outbound API call made it slow. And its one path for app metrics, a scrape port per container, is the one that breaks with multiple workers.
+So my apps now push OpenTelemetry traces and metrics. Traces go to [Grafana Tempo](https://grafana.com/docs/tempo/latest/), metrics go to the same Prometheus, and a log line with a trace ID links to its trace. It's deployed by the same [Ansible playbook](https://github.com/thepsalmist/ansible-server-bootstrap), and nothing new is published on the host.
 
-So the apps now push OpenTelemetry traces and metrics instead. Traces go to Grafana Tempo, metrics go to the same Prometheus, and a log line with a trace ID links to its trace. It's all deployed by the same [Ansible playbook](https://github.com/thepsalmist/ansible-server-bootstrap), and nothing new is published on the host.
+> **TL;DR**
+> - Each process pushes its own metrics and traces over OTLP to Alloy, so there's no per-worker scrape problem and no metrics port to expose.
+> - Alloy copies `service.name` into an `app` label, so pushed metrics line up with the existing logs and container dashboards.
+> - Set `service.instance.id` per process, or every worker writes to the same series and you're back to the original bug.
+> - Set `out_of_order_time_window` in Prometheus, or batched pushes quietly leave gaps.
+> - Writing `trace_id` into JSON logs gives one-click links between Loki and Tempo.
 
-This is what that looks like, for one run of a scheduled background job in one of my apps:
+Here's one run of a scheduled background job in one of my apps:
 
-![A Grafana Tempo trace of a scheduled matchdesk job: a 59 ms root span with three PostgreSQL SELECT spans of 2.56, 5.68 and 5.8 ms near the end](/assets/images/blog/dokku-opentelemetry-tempo-tracing/trace-archive-listings.png)
+![A Grafana Tempo trace of a scheduled background job: a 59 ms root span with three PostgreSQL SELECT spans of 2.56, 5.68 and 5.8 ms near the end](/assets/images/blog/dokku-opentelemetry-tempo-tracing/trace-archive-listings.png)
 
-The whole run took 59 ms. Its three database queries, recorded automatically by the Postgres driver's instrumentation, account for about 14 ms of that, and the first one doesn't start until roughly 40 ms in. The dashboards from the last post could never have told me that. This one trace also shows the limit of tracing: it only sees what's instrumented, so those first 40 ms are a blank bar until I add spans of my own.
+The run took 59 ms. Its three database queries, recorded automatically by the Postgres driver's instrumentation, account for about 14 ms, and the first doesn't start until roughly 40 ms in. The previous dashboards could never have shown that. It also shows tracing's limit: it only sees what's instrumented, so those first 40 ms stay blank until I add spans of my own.
 
-## A normal /metrics scrape breaks with multiple processes
+## Pushing metrics instead of scraping them
 
-The previous post let an app opt into metrics with a container label, and Prometheus scraped its `/metrics` port. That's fine for one process. Most Python web apps aren't one: the app server runs several workers, and a background job runner runs alongside them. Each process keeps its own registry, so the scrape's answer depends on which worker handled it.
+The Python Prometheus client does have a fix for multiple workers, [multiprocess mode](https://prometheus.github.io/client_python/multiprocess/): each worker writes metrics to files in a shared directory and one endpoint adds them up. It works, but gauges need a rule for combining values, some metric types aren't supported, and the directory has to be wiped between restarts.
 
-The Python Prometheus client has a fix, [multiprocess mode](https://prometheus.github.io/client_python/multiprocess/), where every worker writes its metrics to files in a shared directory and one endpoint adds them up. It works, but it changes how metrics are defined (gauges need a rule for how to combine), some metric types such as Info and Enum don't work at all, and the directory has to be wiped between restarts.
+Turning the flow around was the better trade. Instead of Prometheus pulling from each app, each process pushes its own metrics over OTLP, the OpenTelemetry protocol:
 
-The alternative is to turn the flow around. Instead of Prometheus pulling from each app, each process **pushes** its own metrics over OTLP, the OpenTelemetry protocol. Three things made that the better trade here:
+- **Each process reports for itself**, so nothing has to aggregate across workers.
+- **There's no metrics port.** The previous post warned that `dokku ports:add` on a metrics port makes it public. With push, there's nothing to get wrong.
+- **One SDK covers traces and metrics**, sent to the same endpoint with the same configuration.
 
-- **Each process reports for itself.** Nothing has to aggregate across workers inside the app.
-- **There's no port to expose.** The previous post warned against `dokku ports:add` on a metrics port, because Dokku's nginx would make it public. With push, there's no port to get wrong.
-- **One SDK does traces and metrics.** The OpenTelemetry SDK that pushes metrics also produces traces, to the same endpoint, with the same configuration.
+The scrape path stays in the playbook for apps that already use it. New instrumentation pushes.
 
-The scrape path is still in the playbook for apps that already have one. New instrumentation pushes.
+## Alloy as the single OTLP receiver, on a private network
 
-## One receiver, on a network nothing else can reach
-
-The monitoring stack already had Grafana Alloy shipping logs. Alloy can also receive OTLP, so it became the single place apps send telemetry:
+Grafana Alloy already shipped logs on this server, and it can also [receive OTLP](https://grafana.com/docs/alloy/latest/reference/components/otelcol/otelcol.receiver.otlp/), so it became the single place apps send telemetry:
 
 ```
 app ──OTLP──▶ Alloy (alloy:4317 gRPC, alloy:4318 HTTP)
                 ├── traces  ─▶ Tempo
                 └── metrics ─▶ Prometheus (OTLP receiver)
 ```
-
-The receiver and its batching step:
 
 ```alloy
 otelcol.receiver.otlp "apps" {
@@ -73,15 +84,15 @@ otelcol.processor.batch "default" {
 }
 ```
 
-Prometheus 3 accepts OTLP directly once it's started with `--web.enable-otlp-receiver`, so metrics don't need a separate gateway. Tempo is the one new service in the Compose project, with local disk storage and seven days of retention.
+[Prometheus 3 accepts OTLP directly](https://prometheus.io/docs/guides/opentelemetry/) when started with `--web.enable-otlp-receiver`, so metrics need no separate gateway. Tempo is the one new service, with local disk storage and seven days of retention.
 
-The OTLP ports listen only on the `observability` Docker network. Apps join it with `network:set ... attach-post-create`, not the `attach-post-deploy` that scraping used: post-deploy skips one-off `dokku run` containers, and those send telemetry now too. Nothing is published on the host and ufw needs no new rule. It's the same trust boundary as before: any app on that network can send telemetry, and every app on this server is mine.
+The OTLP ports listen only on the `observability` Docker network, which apps join with `network:set ... attach-post-create`. Use that rather than `attach-post-deploy`: a container starts before post-deploy attaches it, so it loses whatever it sends until then, and `dokku run` containers never join at all. Nothing is published on the host and ufw needs no new rule. The trust boundary is unchanged: any app on that network can send telemetry, and every app on this server is mine.
 
-## Making pushed metrics look like scraped ones
+## Giving pushed metrics the same app label as everything else
 
-Every dashboard on this server filters on an `app` label, taken from Dokku's container labels: the logs, the nginx panels, the container panels, the app dropdown. Pushed metrics don't come from a container Prometheus looks at, so they arrive with whatever the SDK sends. Prometheus gives `service.name` and `service.instance.id` special treatment when translating OTLP metrics, mapping them into the identifying `job` and `instance` labels. Other resource attributes aren't labels on every metric by default; they live on `target_info` unless explicitly promoted. No `app` label, so none of the dashboards would ever show them.
+Every dashboard on this server filters on an `app` label taken from Dokku's container labels. Pushed metrics don't come from a container Prometheus is watching, so they don't have one. When Prometheus translates OTLP, [it maps `service.name` and `service.instance.id` to `job` and `instance`](https://prometheus.io/docs/guides/opentelemetry/), and other resource attributes stay on `target_info` unless you promote them.
 
-Two small pieces of configuration close that gap. Alloy copies `service.name` into an `app` attribute on the way through:
+Two small pieces of config close the gap. Alloy copies `service.name` into an `app` attribute:
 
 ```alloy
 otelcol.processor.transform "app_label" {
@@ -105,32 +116,15 @@ otlp:
   promote_resource_attributes: [app, process_type, deployment.environment]
 ```
 
-The contract for an app is then one environment variable: set `OTEL_SERVICE_NAME` to the Dokku app name, and its pushed metrics carry the same `app` label as its logs, its container metrics and its health check.
+The contract for an app is then one environment variable: set `OTEL_SERVICE_NAME` to the Dokku app name, and its metrics carry the same `app` label as its logs, container metrics and health check.
 
-## Prometheus drops out-of-order samples
+## Every worker needs its own instance ID
 
-Scraped samples arrive in order, because Prometheus decides when to collect them. Pushed samples can arrive out of order after batching, retries, or multiple telemetry producers. By default, Prometheus rejects an out-of-order sample once a newer sample for that series has already been ingested.
+Pushing also hands Prometheus two things it used to decide for itself: which process a sample belongs to, and when it arrives. Both caused problems.
 
-The fix is one setting that gives the database a window to accept them:
+Pushing fixes the four-workers problem only if Prometheus can tell the workers apart, and that's the `instance` label, from `service.instance.id`. Leave it unset and every worker writes to the same series. If worker one reports 1,200 requests and worker two reports 900 a second later, Prometheus stores them as consecutive samples of one counter, which looks like a reset. It's the scrape bug again, by a different route.
 
-```yaml
-storage:
-  tsdb:
-    out_of_order_time_window: 30m
-```
-
-It's easy to miss, because the rejections only show up in Alloy's and Prometheus's own logs. On the dashboards, they're just gaps.
-
-## Four workers, one series
-
-Pushing solves the four-workers problem only if Prometheus can tell the workers apart, and the label that does that is `instance`, from `service.instance.id`. Leave it unset and every worker of an app writes to the **same** series. Say worker one reports 1,200 requests and worker two reports 900 a second later: Prometheus stores both as consecutive samples of one counter, which looks like a reset. It's the scrape problem again, arriving by a different route.
-
-`OTEL_SERVICE_NAME` can't fix this, because Dokku config applies to every process of an app. So two resource attributes are set in the app's code, at startup:
-
-- `service.instance.id`: unique per process, for example the hostname plus the PID.
-- `process_type`: `web`, `worker`, or `command` for one-off management commands, so the dashboards can split them the way they already do for container metrics.
-
-In the Django app from the trace above, trimmed down, that's one function:
+Environment variables can't fix this, because Dokku config is the same for every process of an app. So the app sets two resource attributes at startup: `service.instance.id`, unique per process (hostname plus PID), and `process_type`, `web` or `worker`, so dashboards can split them the way they already do for container metrics:
 
 ```python
 import os
@@ -139,9 +133,6 @@ import socket
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.django import DjangoInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -149,53 +140,48 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
-def configure(process_type):
-    # Unset in local dev and tests, so nothing tries to reach Alloy
-    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
-        return
-    # service.name and deployment.environment come from the OTEL_* environment variables
+def setup_telemetry(process_type: str) -> None:
     resource = Resource.create({
-        "service.instance.id": f"{socket.gethostname()}-{os.getpid()}",
         "process_type": process_type,
+        "service.instance.id": f"{socket.gethostname()}-{os.getpid()}",
     })
 
     tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(timeout=5)))
+    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     trace.set_tracer_provider(tracer_provider)
 
-    reader = PeriodicExportingMetricReader(OTLPMetricExporter(timeout=5))
+    reader = PeriodicExportingMetricReader(OTLPMetricExporter())
     metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
-
-    DjangoInstrumentor().instrument()
-    PsycopgInstrumentor().instrument()
-    HTTPXClientInstrumentor().instrument()
 ```
 
-The three instrumentors are what produce spans: one per request, database query and outbound HTTP call. The job runner has no instrumentation of its own, so a small task middleware opens a span per job, named after the task. That's the root span in the trace at the top. The full version also adds a sampler that drops queries made outside any request or job, such as the worker polling its queue. Without it, every poll becomes a trace of its own.
+`Resource.create` still merges in `service.name` and `deployment.environment` from the `OTEL_*` environment variables, so those stay in Dokku config. Call it once in each process, [after any fork](https://opentelemetry-python.readthedocs.io/en/latest/examples/fork-process-model/README.html). The exporters run background threads, and a thread started before a fork doesn't exist in the child.
 
-Call `configure` once in each process, after any fork. The exporters run background threads, and a thread started before a fork doesn't exist in the child. Under gunicorn, `wsgi.py` is the place: each worker imports it after the fork, as long as gunicorn runs without `--preload`. It also has to run before `get_wsgi_application()`, because the Django instrumentation works by adding a middleware:
+## Prometheus drops out-of-order samples
 
-```python
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-telemetry.configure("web")
-application = get_wsgi_application()
+The second problem is timing. Scraped samples arrive in order, because Prometheus decides when to collect them. Pushed samples can arrive out of order after batching or retries, and by default Prometheus rejects a sample older than one it already has for that series. [Its OTLP guide recommends](https://prometheus.io/docs/guides/opentelemetry/) a window that accepts them:
+
+```yaml
+storage:
+  tsdb:
+    out_of_order_time_window: 30m
 ```
 
-`manage.py` covers every other process: it calls `configure("worker")` before starting the job runner, and `configure("command")` for anything else, with the command wrapped in a span of its own.
+It's easy to miss: the rejections only appear in Alloy's and Prometheus's own logs. On the dashboards, they're just gaps.
 
-## From a log line to its trace, and back
+## Linking logs and traces in Grafana
 
-Traces are most useful when you don't have to go looking for them. Logs stay on stdout and still go to Loki the way they did before. If an app writes `trace_id` as a field in its JSON log lines, Grafana's Loki datasource turns it into a link:
+With metrics lined up, the traces needed to connect to the logs. Logs stay on stdout, where Dokku and Loki already handle them. Alloy isn't set up to receive OTLP logs, so if your SDK setup exports logs by default, set [`OTEL_LOGS_EXPORTER=none`](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/). If an app writes `trace_id` as a field in its JSON logs, a [derived field](https://grafana.com/docs/grafana/latest/datasources/loki/configure/) on the Loki datasource turns it into a link:
 
 ```yaml
 derivedFields:
   - name: trace_id
     matcherRegex: '"trace_id":\s*"(\w+)"'
     datasourceUid: tempo
+    url: "$${__value.raw}"
     urlDisplayLabel: View trace
 ```
 
-The Tempo datasource links the other way. From any span, Grafana opens that app's logs within five minutes either side, filtered on the trace ID, by mapping the trace's `service.name` to the `app` label in Loki:
+The [Tempo datasource](https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/configure-trace-to-logs/) links the other way: from any span, Grafana opens that app's logs within five minutes either side, filtered on the trace ID, by mapping `service.name` to Loki's `app` label:
 
 ```yaml
 tracesToLogsV2:
@@ -208,9 +194,7 @@ tracesToLogsV2:
       value: app
 ```
 
-Both directions depend on the same convention as the metrics: the service name is the Dokku app name. One name joins all three signals.
-
-One detail to watch: setting the SDK up in code, as above, exports only traces and metrics, but the zero-code `opentelemetry-instrument` wrapper reads `OTEL_LOGS_EXPORTER` and can send logs over OTLP too. This pipeline has no logs output, so if you use the wrapper, set `OTEL_LOGS_EXPORTER=none` and keep logs on stdout, where Dokku and Loki already handle them.
+Both directions rely on the same convention as the metrics: the service name is the Dokku app name. One name joins all three signals.
 
 ## Running it yourself
 
@@ -223,10 +207,11 @@ dokku network:set myapp attach-post-create observability
 dokku config:set myapp \
   OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318 \
   OTEL_SERVICE_NAME=myapp \
+  OTEL_LOGS_EXPORTER=none \
   OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 ```
 
-To check the pipeline before touching an app, send a test trace and metric with the OpenTelemetry Collector's `telemetrygen` and look for them in Tempo and Prometheus:
+To check the pipeline before touching an app, send a test trace and metric with [`telemetrygen`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/cmd/telemetrygen) and look for them in Tempo and Prometheus:
 
 ```bash
 tg=ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
@@ -238,4 +223,6 @@ docker run --rm --network observability curlimages/curl -s -G http://prometheus:
 
 If the last command returns series labelled `app="otlptest"`, the label mapping works end to end.
 
-This adds one more service to a monitoring stack that, as the last post showed, already outweighs the apps it watches, and Tempo 3 logs the occasional harmless error when it's idle. In return, the trace above came with a question I couldn't have asked before: what that job does for 40 ms before its first query. The next thing I want is alerting that uses all three signals: a failing health check, a spike in 5xx, and the slow trace that explains it. That's a post of its own.
+The decision rule I'd keep: scrape when one process can answer for the whole app, and push when an app runs several processes or you want traces anyway, since the same SDK sends both.
+
+Tempo adds one more service to a stack that already outweighs the apps it watches. In return, that 59 ms trace raised a question I couldn't have asked before: what the job does for 40 ms before its first query. Next is alerting that uses all three signals: a failing health check, a spike in 5xx, and the slow trace that explains it. That's a post of its own.
