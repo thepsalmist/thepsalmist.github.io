@@ -28,23 +28,37 @@ layout: default
 
 <section class="about">
   <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">cat about.md</span></div>
-  <p><span class="comment"># </span>Most recently a Senior Software Engineer at <a href="https://searchatlas.com">Search Atlas</a>, an agentic SEO platform — backend services integrating Google Search Console, Analytics, Ads, and Meta Ads. Previously three years at <a href="https://codeforafrica.org">Code for Africa</a> building civic-tech data platforms used by researchers and journalists across the continent.</p>
+  <p><span class="comment"># </span>Senior Software Engineer at Novazury Labs in Nairobi, building payment integrations, document ingestion pipelines, and the infrastructure under them. Before that, a contract role at <a href="https://searchatlas.com">Search Atlas</a>, an agentic SEO platform, on backend services integrating Google Search Console, Analytics, Ads, and Meta Ads, and three years at <a href="https://codeforafrica.org">Code for Africa</a> building civic-tech data platforms used by researchers and journalists across the continent.</p>
   <p><span class="comment"># </span>Recent work centers on applied AI systems: gated RAG pipelines, LLM routing with automatic failover, and self-hosted model platforms where data sovereignty matters. AWS Solutions Architect certified. Open-source contributor to Django and CKAN.</p>
 </section>
 
 <section id="experience">
-  <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">last -n 5</span></div>
+  <div class="prompt"><span class="user">xavier@nairobi:~$</span> <span class="cmd">last -n 6</span></div>
   <div class="hist">
+    <div class="job">
+      <div class="job-head">
+        <h3 class="host">Novazury Labs</h3>
+        <span class="when">Jun 2026 &rarr; present</span>
+      </div>
+      {%- assign build_month = site.time | date: "%-m" | plus: 0 %}
+      {%- assign now_months = site.time | date: "%Y" | times: 12 | plus: build_month %}
+      <div class="job-sub">
+        <span class="role">Senior Software Engineer · Nairobi</span>
+        <span class="dur">{{ now_months | minus: 24317 }} months</span>
+      </div>
+      <p>Mobile money payment integrations for three products, with signed webhook verification, idempotent processing, and end-to-end transaction tracing. Architected a document ingestion pipeline that extracts structured events from unstructured PDFs, routes inconsistent records to human review, and delivers each alert once even when a job retries. Standardised background jobs across FastAPI and Django services on Procrastinate in PostgreSQL, with no separate message broker. Zero-downtime CI/CD that builds versioned images and gates each release on its migrations, and Ansible that provisions every server as an identical, hardened container host with metrics, logs, and traces built in.</p>
+    </div>
+
     <div class="job">
       <div class="job-head">
         <h3 class="host">Search Atlas</h3>
         <span class="when">Aug 2025 &rarr; Jun 2026</span>
       </div>
       <div class="job-sub">
-        <span class="role">Senior Software Engineer · Remote · US</span>
+        <span class="role">Senior Software Engineer (Contract) · Remote · US</span>
         <span class="dur">11 months</span>
       </div>
-      <p>Backend services for an agentic SEO platform: DRF APIs and Celery workers over Google Search Console, Analytics, Ads and Meta Ads. Extended the LLM orchestration layer with multi-provider routing, automatic failover, and cost-aware model selection. Fixed a Celery Beat race that sent customers duplicate report emails, using Redis-backed distributed locks. Instrumented Django and Celery with OpenTelemetry, and tuned PostgreSQL and ClickHouse for high-volume analytics tables. Claude Code was the daily workflow, from issue-driven plans through AI-assisted review in CI.</p>
+      <p>Backend services for an agentic SEO platform: DRF APIs and Celery workers over Google Search Console, Analytics, Ads and Meta Ads. Extended the LLM orchestration layer with multi-provider routing, automatic failover, and cost-aware model selection. Fixed a Celery Beat race that sent customers duplicate report emails, using Redis-backed distributed locks. Instrumented Django and Celery with OpenTelemetry, and tuned PostgreSQL and ClickHouse for high-volume analytics tables. Built an LLM-powered tool that turns open issues, errors, and alerts into daily developer briefings and end-of-day reports, cutting manual status reporting for two engineering teams. Claude Code was the daily workflow, from issue-driven plans through AI-assisted review in CI.</p>
     </div>
 
     <div class="job">
@@ -68,7 +82,7 @@ layout: default
         <span class="role">Software Engineer · On-site · Nairobi</span>
         <span class="dur">1 yr 4 mo</span>
       </div>
-      <p>Tendersure Africa, a B2B procurement SaaS: Django and Vue.js in English, French, Portuguese and Amharic, with localised payment gateways, signed callbacks, and idempotent retries; Terraform provisioning, VM-to-ECS container migration, CloudWatch and Prometheus alerting.</p>
+      <p>Tendersure Africa, a B2B procurement SaaS: Django and Vue.js in English, French, Portuguese and Amharic, with payment gateways across 8 African markets, signed callbacks, idempotent retries, and reconciliation; Terraform provisioning, VM-to-ECS container migration, CloudWatch and Prometheus alerting, and company sites moved off WordPress to static hosting on S3 and Lightsail.</p>
     </div>
 
     <div class="job">
@@ -267,7 +281,7 @@ layout: default
       <span class="status running">●</span><h3>Self-hosted LLM Platform</h3>
       <span class="unit">llm-platform.service</span>
     </div>
-    <p>Led the deployment of a self-hosted LLM platform to complement commercial providers — a private option where data sovereignty and predictable inference costs mattered most.</p>
+    <p>Deployed and operated a self-hosted LLM platform with role-based access for 5 teams, a private option alongside commercial providers where data sovereignty and predictable inference costs mattered most.</p>
     <div class="meta">stack: <b>Ollama · OpenWebUI</b></div>
   </article>
 
@@ -285,7 +299,7 @@ layout: default
       <span class="status running">●</span><h3>Mediacloud Story-Indexer</h3>
       <span class="unit">story-indexer.service</span>
     </div>
-    <p>Contributed to a distributed news ingestion pipeline operated by Mediacloud, a nonprofit research collaboration — an open archive used by researchers studying media ecosystems globally.</p>
+    <p>Built the RabbitMQ and Elasticsearch ingestion service for Mediacloud, an open-source news research pipeline drawing on 34,000 sources. Documents are keyed by a hash of their URL, so a duplicate story is rejected at index time.</p>
     <div class="meta">stack: <b>Python · FastAPI · RabbitMQ · Elasticsearch · Docker</b></div>
   </article>
 
@@ -305,6 +319,19 @@ layout: default
     </div>
     <p>Census and survey visualization platform with nested administrative geographies, tuned for spatial queries serving interactive maps across multiple African countries.</p>
     <div class="meta">stack: <b>Django · GeoDjango · PostgreSQL</b></div>
+  </article>
+
+  <article class="svc">
+    <div class="svc-head">
+      <span class="status running">●</span><h3>Ansible Server Bootstrap</h3>
+      <span class="lvl personal">OPEN SOURCE</span>
+      <span class="unit">server-bootstrap.service</span>
+    </div>
+    <p>The idempotent Ansible roles behind my servers, open-sourced: a fresh Ubuntu host becomes a hardened Docker and Dokku host, with SSH hardening that rolls itself back on failure, ufw and fail2ban, and Prometheus, Loki, Tempo and Alloy collecting metrics, logs, and traces.</p>
+    <div class="meta">stack: <b>Ansible · Docker · Dokku · Prometheus · Loki · Tempo · Alloy</b></div>
+    <div class="actions">
+      <a href="https://github.com/thepsalmist/ansible-server-bootstrap">github ↗</a>
+    </div>
   </article>
 
   <article class="svc">
